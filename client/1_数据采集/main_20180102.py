@@ -114,6 +114,11 @@ class Monitor_action:
     def __init__(self):
         self.type = ''
 
+    @abstractmethod
+    def run(self):
+        """按照频率执行监控行为"""
+        pass
+
 ## 服务器监控接口
 class ServerMonitorable(object):
     """定义一个服务器基类"""
@@ -255,8 +260,73 @@ class GP_monitor(Monitor_action):
 ## newbi
 # 1. newbi进程
 # 2. 200
-class NewBI_moniotr():
-    """"""
+class NewBI_monitor(Monitor_action):
+    """NewBI相关监控"""
+    def __init__(self, host_obj, service_option):
+        Monitor_action.__init__(self)
+        self.type = 'newbi-monitor'
+        self.host_obj = host_obj
+        self.service_option = service_option
+
+    def fun_query(self,_ssh,m_dim,query_m_value,query_m_log):
+        """查询语句"""
+        ## todo 抽象抽来 共同的方法
+        m_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        ssh_stdin, ssh_stdout_basic, ssh_stderr = _ssh.exec_command(query_m_value)
+        ssh_stdin, ssh_stdout_log, ssh_stderr = _ssh.exec_command(query_m_log)
+        data = format_json(project_name, self.host_obj.host_ip, self.type, m_dim,ssh_stdout_basic.read(), ssh_stdout_log.read(), m_timestamp)
+        return data
+
+    def check_process(self,_ssh):
+        """查询newbi进程是否存在"""
+        data = self.fun_query(_ssh, 'newbi-process', """ps -ef | grep jetty | grep -v "grep" | wc -l""", """ps -ef | grep jetty | grep -v 'grep'""")
+        urlPost(data)
+
+    def check_web_available(self,_ssh):
+        """查询web是否可以访问"""
+        # todo 模拟登陆
+        pass
+
+    def run(self):
+        """执行"""
+        ssh = paramiko.SSHClient()
+        ssh.load_system_host_keys()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(self.host_obj.host_ip, username=self.host_obj.username, password=self.host_obj.passwd)
+        ## 进行查询
+        self.check_process(ssh)
+
+class Kettle_monitor(Monitor_action):
+    """Kettle相关监控"""
+    def __init__(self, host_obj, service_option):
+        Monitor_action.__init__(self)
+        self.type = 'newbi-monitor'
+        self.host_obj = host_obj
+        self.service_option = service_option
+
+    def fun_query(self,_ssh,m_dim,query_m_value,query_m_log):
+        """查询语句"""
+        m_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        ssh_stdin, ssh_stdout_basic, ssh_stderr = _ssh.exec_command(query_m_value)
+        ssh_stdin, ssh_stdout_log, ssh_stderr = _ssh.exec_command(query_m_log)
+        data = format_json(project_name, self.host_obj.host_ip, self.type, m_dim, ssh_stdout_basic.read(),
+                           ssh_stdout_log.read(), m_timestamp)
+        print data
+        return data
+
+    def check_process(self,_ssh):
+        """检查KETTLE进程是否存在"""
+        data = self.fun_query(_ssh,'kettle-process',"""ps -ef | grep spoon.sh | grep -v 'grep'|wc -l""","""ps -ef | grep spoon.sh | grep -v 'grep'""")
+        urlPost(data)
+
+    def run(self):
+        """执行"""
+        ssh = paramiko.SSHClient()
+        ssh.load_system_host_keys()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(self.host_obj.host_ip, username=self.host_obj.username, password=self.host_obj.passwd)
+        ## 进行查询
+        self.check_process(ssh)
 
 class Task():
     """
@@ -285,8 +355,16 @@ class Task():
                     # print "服务CENTOS：" + str(services[service])
                     # Centos_monitor_server(host_obj,services[service]).run()
             elif service =='gp':
-                print "服务GP：" + str(services[service])
-                GP_monitor(host_obj,services[service]).run()
+                pass
+                # print "服务GP：" + str(services[service])
+                # GP_monitor(host_obj,services[service]).run()
+            elif service == 'newbi':
+                pass
+                # print "服务newbi：" + str(services[service])
+                # NewBI_monitor(host_obj,services[service]).run()
+            elif service == 'kettle':
+                print "服务newbi：" + str(services[service])
+                Kettle_monitor(host_obj,services[service]).run()
             #     pass
             #
 

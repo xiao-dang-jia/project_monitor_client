@@ -1,5 +1,5 @@
-import urllib
-import urllib2
+import requests
+import request
 
 url = 'http://10.4.33.156/login.html'
 
@@ -9,6 +9,5 @@ headers = {
 
 data = {'name':'lining@bi.com', "password":'newbiroot,123'}
 
-payload = urllib.urlencode(data)
-request = urllib2.Request(url, payload, headers=headers)
-response = urllib2.urlopen(request)
+reponse = requests.get(url,params=data)
+print(reponse.url)
