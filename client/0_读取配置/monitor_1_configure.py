@@ -8,6 +8,7 @@ function:
 import sys
 import MySQLdb
 import json
+import monitor_2_class
 
 #解决 二进制str 转 unicode问题
 reload(sys)
@@ -34,25 +35,80 @@ def trans(input_text):
     cCode = CCode()
     return cCode.str(input_text)
 
-def getConfigure(configure_hostip,configure_username,configure_password,configure_database):
+def getData(db_obj,table,column="*",conditions=''):
     """
-    按照项目名称和版本，读取所需要的配置信息
-    从数据库中取出服务配置信息
+    从数据库中获取数据
 
-    :param hostip:
-    :param username:
-    :param password:
-    :param database:
-    :param table:
-    :return: 返回一个元组
+    :param db_obj: 目标数据库对象
+    :param table: 来源表
+    :param column: select的列
+    :param conditions: 筛选条件
+    :return:
     """
-    db = MySQLdb.connect(configure_hostip,configure_username,configure_password,configure_database,charset='utf8')
+    db = MySQLdb.connect(db_obj.host_ip,db_obj.username,db_obj.password,db_obj.database,charset='utf8')
     cursor = db.cursor()
-    table = "c_monitor_one_table"
-    cursor.execute("""select * from %s where status is True;""" %table)
+    cursor.execute("""select %s from %s%s;""" %(column,table,conditions))
+    # print """select %s from %s%s;""" %(column,table,conditions)
     result = cursor.fetchall()
     db.close()
     return result
 
-def getHostobjByIP(input_ip):
-    pass
+def genConfigure():
+    host_ip = '172.18.21.245'
+    db_nick = '李宁配置数据库'
+    username = 'root'
+    password = '54321'
+    port = '5432'
+    database = 'mydata'
+
+    config_db_obj = monitor_2_class.DB(host_ip, db_nick, username, password, port, database)
+    # 1. 获取项目信息
+    data_project = getData(db_obj=config_db_obj,table='moniter_m_project',column='nick')
+    ## 获取信息
+    project_nick = data_project[0][0]
+
+    # 2. 按照项目名称，获取主机信息
+    project_nick_conditions = " where project_nick='%s'" %project_nick
+    data_host = getData(db_obj=config_db_obj,table='moniter_m_d_host',conditions=project_nick_conditions)
+    for row in data_host:
+        # 3.1 通过host_nick找到相应的host，生成相应的host_obj。
+        host_nick = row[2]
+        host_ip = row[3]
+        host_port = row[4]
+        server_type = row[5]
+        user_conditions = " where project_nick= '%s' and host_nick = '%s'" %(project_nick,host_nick)
+        data_user = getData(db_obj=config_db_obj,table='moniter_m_d_user_host',conditions=user_conditions)
+        print data_user
+        host_username =data_user[0][4]
+        host_password =data_user[0][5]
+        # 生成一个host实例
+        host_obj = monitor_2_class.Host(host_ip,host_nick,host_username,host_password,server_type)
+
+        # todo
+        #
+        db_user_conditions = " where project_nick= '%s' and host = '%s'" % (project_nick, host_ip)
+        data_db_user = getData(db_obj=config_db_obj, table='moniter_m_d_db', conditions=db_user_conditions)
+        # 1. 如果有数据再做处理，无数据就置为空。
+        if len(data_db_user)!=0:
+            # 实例化db对象
+            # todo 明天这里开始做
+            monitor_2_class.DB(host_ip,)
+        else:
+            pass
+        # 2. 如果同一个IP上有多个数据库要监控的话，那么还需要再加一层判断
+
+        # db_nick =
+        # database =
+        print data_user
+
+
+        # 3.2 通过host_nick和project_nick找到相应的服务，监控项和监控频率
+
+        # 4. 将其封装为server_service_obj，成为一个list。
+
+    # print data_host
+
+
+    # 3. 根据ip获取相应的服务
+
+genConfigure()

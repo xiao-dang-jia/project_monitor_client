@@ -280,3 +280,5 @@ class GP_monitor(BaseMonitorAction):
 """select * from gp_segment_configuration where content!='-1' and role='p';""")
         monitor_4_post.urlPost(data)
 
+class DataLogic():
+    pass
