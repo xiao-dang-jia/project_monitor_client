@@ -1,6 +1,11 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
-"""API更改前的代码"""
+"""API更改后的代码:
+1. 加入BlockingScheduler
+2. 使用装饰器，而是用add_job
+3. 在查询函数中调用SSH
+当前版本:
+"""
 import threading
 import time
 import sys
@@ -18,11 +23,16 @@ import paramiko
 import traceback
 import urllib,urllib2
 import psycopg2
+from apscheduler.schedulers.background import BlockingScheduler
+import logging
+
 
 #解决 二进制str 转 unicode问题
 reload(sys)
 sys.setdefaultencoding('utf8')
 
+logging.basicConfig()
+sched=BlockingScheduler()
 
 ## 获取配置信息
 class Configure:
@@ -95,7 +105,7 @@ class Host:
 
 class Server_service:
     """服务器服务
-    输入： host对象 + 服务字典
+    输入： host对象 + 服务（包括配置参数）
     输出：
     """
     def __init__(self, host_obj, service_dict):
@@ -107,7 +117,7 @@ class Server_service:
 
 ########################
 #### 按照配置信息实施监控行为
-class Monitor_action:
+class BaseMonitorAction:
     """监控类（抽象类）"""
     def __init__(self):
         self.type = ''
@@ -116,9 +126,9 @@ class Monitor_action:
     def run(self):
         """按照频率执行监控行为"""
         pass
-
+#
 ## 服务器监控接口
-class ServerMonitorable(object):
+class BaseServerMonitorable(object):
     """定义一个服务器基类"""
     __metaclass__ = ABCMeta  # 指定这是一个抽象类
     @abstractmethod
@@ -142,13 +152,13 @@ class ServerMonitorable(object):
         pass
 
 ## centos 类
-class Centos_monitor_server(Monitor_action,ServerMonitorable):
-    """继承自ServerMonitorable接口和基础监控类 Monitor_action"""
+class Centos_monitor_server(BaseMonitorAction,BaseServerMonitorable):
+    """继承自BaseServerMonitorable接口和基础监控类 BaseMonitorAction"""
 
     def __init__(self, host_obj, service_option):
         """这里给到的service_option要到最细的，即一个服务，一个对象进来"""
-        ServerMonitorable.__init__(self)
-        Monitor_action.__init__(self)
+        BaseServerMonitorable.__init__(self)
+        BaseMonitorAction.__init__(self)
         self.type = 'server_centos'
         self.host_obj = host_obj
         self.service_option = service_option
@@ -200,12 +210,12 @@ class Centos_monitor_server(Monitor_action,ServerMonitorable):
         self.runCPU(ssh)
         self.runIOPS(ssh)
 ##
-
+#
 ## 数据库相关监控
-class GP_monitor(Monitor_action):
+class GP_monitor(BaseMonitorAction):
     """GP相关监控"""
     def __init__(self,host_obj,service_option):
-        Monitor_action.__init__(self)
+        BaseMonitorAction.__init__(self)
         self.type = 'gp-monitor'
         self.host_obj = host_obj
         self.service_option = service_option
@@ -258,10 +268,10 @@ class GP_monitor(Monitor_action):
 ## newbi
 # 1. newbi进程
 # 2. 200
-class NewBI_monitor(Monitor_action):
+class NewBI_monitor(BaseMonitorAction):
     """NewBI相关监控"""
     def __init__(self, host_obj, service_option):
-        Monitor_action.__init__(self)
+        BaseMonitorAction.__init__(self)
         self.type = 'newbi-monitor'
         self.host_obj = host_obj
         self.service_option = service_option
@@ -294,37 +304,48 @@ class NewBI_monitor(Monitor_action):
         ## 进行查询
         self.check_process(ssh)
 
-class Kettle_monitor(Monitor_action):
+class Kettle_monitor(BaseMonitorAction):
     """Kettle相关监控"""
     def __init__(self, host_obj, service_option):
-        Monitor_action.__init__(self)
+        BaseMonitorAction.__init__(self)
         self.type = 'newbi-monitor'
         self.host_obj = host_obj
         self.service_option = service_option
+        self.freq_process = 3
 
     def fun_query(self,_ssh,m_dim,query_m_value,query_m_log):
         """查询语句"""
         m_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         ssh_stdin, ssh_stdout_basic, ssh_stderr = _ssh.exec_command(query_m_value)
         ssh_stdin, ssh_stdout_log, ssh_stderr = _ssh.exec_command(query_m_log)
-        data = format_json(project_name, self.host_obj.host_ip, self.type, m_dim, ssh_stdout_basic.read(),
+        data = format_json(project_name, self.host_obj.host_ip, None, self.type, m_dim, ssh_stdout_basic.read(),
                            ssh_stdout_log.read(), m_timestamp)
         print data
         return data
 
-    def check_process(self,_ssh):
+    # @sched.scheduled_job('interval', seconds=3, args=('self',))
+    def check_process(self):
         """检查KETTLE进程是否存在"""
+        ## 返回一个ssh对象
+        _ssh = self.ssh_server()
         data = self.fun_query(_ssh,'kettle-process',"""ps -ef | grep spoon.sh | grep -v 'grep'|wc -l""","""ps -ef | grep spoon.sh | grep -v 'grep'""")
         urlPost(data)
+        print "我在POST数据！！！！"
 
-    def run(self):
-        """执行"""
+    def ssh_server(self):
+        """ssh 连接到目标服务器中"""
         ssh = paramiko.SSHClient()
         ssh.load_system_host_keys()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.host_obj.host_ip, username=self.host_obj.username, password=self.host_obj.passwd)
+        return ssh
+
+
+    def run(self):
+        """执行"""
+        pass
         ## 进行查询
-        self.check_process(ssh)
+        # self.check_process(ssh)
 
 class Task():
     """
@@ -342,6 +363,7 @@ class Task():
         ## 2. 根据服务列表，
         host_obj = self.server_service_obj.host_obj
         services = self.server_service_obj.service_dict
+        print services
         for service in services:
             ### 服务大类
             if service =='system':
@@ -361,27 +383,95 @@ class Task():
                 # print "服务newbi：" + str(services[service])
                 # NewBI_monitor(host_obj,services[service]).run()
             elif service == 'kettle':
-                print "服务newbi：" + str(services[service])
-                Kettle_monitor(host_obj,services[service]).run()
-            #     pass
-            #
+                # 添加任务到sched 中去
+                ## 判定使用的是时间还是频率
+                if services[service]['time_format'] == 'period':
+                    print int(services[service]['monitor_process'])
+                    sched.add_job(Kettle_monitor(host_obj, services[service]).check_process, 'interval',
+                                  seconds=int(services[service]['monitor_process']))
+                elif services[service]['time_format'] == 'time':
+                    # 先对时间做一次处理
+                    # 取出时间
+                    time = services[service]['monitor_process']
+                    time_dict = getFormattedTime(time)
+                    sched.add_job(Kettle_monitor(host_obj, services[service]).check_process, 'cron',
+                                  year=time_dict['year'],month=time_dict['month'],day=time_dict['day'],
+                                  hour=time_dict['hour'],minute=time_dict['minute'])
+                print services[service]
+
+def toDict(**kwargs):
+    """
+    格式化为字典
+    :param kwargs:
+    :return:
+    """
+    for key in kwargs.keys():
+        globals()[key] = kwargs[key]
+    return kwargs
+
+def getFormattedTime(in_time_str):
+    """
+    格式化时间
+    :param in_time_str: 配置时间
+    :return: 格式化的配置时间（字典）
+    :raise TypeError: 如果输入的字符串格式不符合
+    """
+    try:
+        time_str_arr = in_time_str.split(' ')
+
+        date_str = time_str_arr[0]
+        time_str = time_str_arr[1]
+
+        # 处理日期
+        out_year = date_str.split('-')[0]
+        out_month = date_str.split('-')[1]
+        out_day = date_str.split('-')[2]
+
+        out_hour = time_str.split(':')[0]
+        out_minute = time_str.split(':')[1]
+        return toDict(year=out_year, month=out_month, day=out_day, hour=out_hour, minute=out_minute)
+    except Exception as e:
+        raise TypeError('定点执行时间配置错误!%s' %e)
+
+
+
 
 def urlPost(postdata):
+    """
+    将API数据POST到服务端接口
+
+    :param postdata:
+    :return: 返回HTTP状态码
+    """
     data = urllib.urlencode(postdata)
     req = urllib2.Request('http://172.18.21.245:8080/moniter/api/collect', data)
     response = urllib2.urlopen(req)
     return response.read()
 
-def format_json(project_nick,server_ip,m_type,m_dim,m_value,m_logger,m_timestamp):
-    """返回一个JSON类型数据"""
+def format_json(project_nick,host_nick,db_nick,m_type,m_dim,m_value,m_logger,m_timestamp):
+    """
+    将数据格式化API数据
+
+    :param project_nick:
+    :param host_nick:
+    :param db_nick:
+    :param m_type:
+    :param m_dim:
+    :param m_value:
+    :param m_logger:
+    :param m_timestamp:
+    :return: 返回一个字典类型数据
+    """
     data = {"project_nick":project_nick,\
-            "server_ip":server_ip,\
+            "host_nick":host_nick,\
+            "db_nick":db_nick,\
             "m_type":m_type,\
             "m_dim":m_dim,\
             "m_value":m_value,\
             "m_logger":m_logger,\
             "m_timestamp":m_timestamp}
     return data
+
 ## 主方法
 if __name__ == '__main__':
     try:
@@ -423,8 +513,9 @@ if __name__ == '__main__':
         ## 根据Server_service列表生成任务对象
         for server_service_obj in server_service_obj_list:
             Task(server_service_obj).run()
-
-
+        # 定时调度开启
+        sched.start()
+        print "+++++++++++++++++++++++++++++++++++++++finish+++++++++++++++++++++++++++++++++++++++"
     except Exception as e:
         exstr = traceback.format_exc()
         raise ValueError(exstr)
