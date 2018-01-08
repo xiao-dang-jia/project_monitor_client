@@ -135,17 +135,17 @@ class BaseServerMonitorable(object):
         pass
 
     @abstractmethod
-    def runIOPS(self):
+    def check_IOPS(self):
         """返回IOPS"""
         pass
 
     @abstractmethod
-    def runMemory(self):
+    def check_memory(self):
         """返回内存"""
         pass
 
     @abstractmethod
-    def runDisk(self):
+    def check_disk(self):
         """返回磁盘使用率"""
         pass
 
