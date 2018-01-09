@@ -15,17 +15,12 @@ import psycopg2
 import monitor_4_post
 
 
-
-
-
 #解决 二进制str 转 unicode问题
 reload(sys)
 sys.setdefaultencoding('utf8')
 
 
 PROJECT_NICK = 'lining-dw'
-
-
 
 # 公共函数
 def ssh_server(host_obj):
@@ -39,7 +34,6 @@ def ssh_server(host_obj):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(host_obj.host_ip, username=host_obj.username, password=host_obj.passwd)
     return ssh
-
 
 def fun_query(ssh,m_dim,query_m_value,query_m_log):
     """
@@ -70,7 +64,6 @@ class Host:
     def __str__(self):
         return "Host:"+ str(self.host_ip) + "\tusername:"+ self.username + "\tpasswd:" + self.passwd + "\tversion:" + self.version
 
-
 class DB:
     """定义了个数据库类"""
     def __init__(self,host_ip,db_nick, username, password, port, database):
@@ -92,7 +85,6 @@ class Server_service:
 
     def __str__(self):
         return "Host:" + str(self.host_obj) + "\tThis is the service i provided:" + str(self.service_dict)
-
 
 class BaseMonitorAction:
     """监控类（抽象类）"""

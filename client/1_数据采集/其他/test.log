@@ -1,19 +1,4 @@
-DEBUG:root:This message should go to the log file
-INFO:root:So should this
-WARNING:root:And this, too
-WARNING:root:This message should go to the log file
-INFO:root:So should this
-WARNING:root:And this, too
-WARNING:root:This message should go to the log file
-WARNING:root:And this, too
-WARNING:root:And this, too
-WARNING:root:Look before you Leap
-WARNING:root:And this, too
-2017-12-28 12:04:37,921 Look before you Leap
-2017-12-28 12:04:37,921 And this, too
-2017-12-28 12:11:39,695 Look before you Leap
-2017-12-28 12:11:39,696 And this, too
-2017-12-28 12:11:49,415 Look before you Leap
-2017-12-28 12:11:49,416 And this, too
-2017-12-28 12:14:32,899 Look before you Leap
-2017-12-28 12:14:32,900 And this, too
+2018-01-09 16:01:53,102 这是执行的命令： psql -h 127.0.0.1
+2018-01-09 16:01:53,102 这是执行的命令： psql -h 127.0.0.1
+2018-01-09 16:01:53,102 这是执行的命令： psql -h 127.0.0.1
+2018-01-09 16:01:53,102 这是执行的命令： psql -h 127.0.0.1
