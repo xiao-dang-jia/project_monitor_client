@@ -79,8 +79,9 @@ class Server_service:
     输入： host对象 + 服务（包括配置参数）
     输出：
     """
-    def __init__(self, host_obj, service_dict):
+    def __init__(self, host_obj, db_obj, service_dict):
         self.host_obj = host_obj
+        self.db_obj = db_obj
         self.service_dict = service_dict
 
     def __str__(self):
@@ -154,6 +155,9 @@ class Centos_monitor_server(BaseMonitorAction,BaseServerMonitorable):
         self.type = 'system'
         self.host_obj = host_obj
 
+    def toString(self):
+        return self.host_obj.host_nick + self.type
+
         # 增加自己的方法或者重写
     def check_CPU(self):
         """执行CPU监控"""
@@ -163,6 +167,7 @@ class Centos_monitor_server(BaseMonitorAction,BaseServerMonitorable):
         data = monitor_4_post.format_json(PROJECT_NICK, self.host_obj.host_nick, None, self.type, m_dim,
                                           query_result[0], query_result[1], query_result[2])
         monitor_4_post.urlPost(data)
+        print data
 
     def check_IOPS(self):
         """执行IOPS"""
