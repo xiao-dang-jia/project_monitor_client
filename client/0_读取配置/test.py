@@ -14,22 +14,23 @@ import random
 import uuid
 import psycopg2
 
-#解决 二进制str 转 unicode问题
+# 解决 二进制str 转 unicode问题
 reload(sys)
 sys.setdefaultencoding('utf8')
 
 ## 全局变量
 conn = psycopg2.connect(database="dw", user="gpadmin", password="gpadmin", host="10.4.33.151", port="5432")
-DATE_TODAY = datetime.datetime.strftime(datetime.date.today(),'%Y-%m-%d')
-DATE_YESTERDAY = datetime.datetime.strftime(datetime.date.today() - datetime.timedelta(days=1),'%Y-%m-%d')
+DATE_TODAY = datetime.datetime.strftime(datetime.date.today(), '%Y-%m-%d')
+DATE_YESTERDAY = datetime.datetime.strftime(datetime.date.today() - datetime.timedelta(days=1), '%Y-%m-%d')
 ERR_LOG_PATH = "/tmp/kettle/run_sqlscript/"
-ERR_AMTCHING_LIST = ["FAILED:","ERROR:"]
+ERR_AMTCHING_LIST = ["FAILED:", "ERROR:"]
 
 # 脚本执行日志
 SEP_HYPHEN = "--------------------"
-SEP_ASTERISK= "********************"
+SEP_ASTERISK = "********************"
 SEP_PLUS = "++++++++++++++++++++"
 SEP_TILDE = "~~~~~~~~~~~~~~~~~~~~"
+
 
 # log相关
 def setup_logger(logger_name, log_file, level=logging.INFO):
@@ -42,7 +43,7 @@ def setup_logger(logger_name, log_file, level=logging.INFO):
     """
     l = logging.getLogger(logger_name)
     formatter = logging.Formatter('%(asctime)s : %(message)s')
-    fileHandler = logging.FileHandler(log_file, mode='w')
+    fileHandler = logging.FileHandler(log_file, mode='a')
     fileHandler.setFormatter(formatter)
     streamHandler = logging.StreamHandler()
     streamHandler.setFormatter(formatter)
@@ -52,18 +53,18 @@ def setup_logger(logger_name, log_file, level=logging.INFO):
     l.addHandler(streamHandler)
 
 
-
 # 创建类
 # 每一个操作自己的对象
 # 注意锁的位置，否则变成单线程了
 
 class Run_script:
     """自定义run_script类，需要完整文件名和分析时间进行初始化"""
-    def __init__(self,filename,analysisdate):
+
+    def __init__(self, filename, analysisdate):
         self.filename = filename
         self.analysisdate = analysisdate
 
-    def insert(self, filename, start_time_formatted, end_time_formatted, time_spend, task_uuid, thread_id, task_status, log_message, orignal_command):
+    def insert_begin(self, filename, start_time_formatted, task_uuid, thread_id):
         """往数据库中插入日志"""
         filename_arr = filename.split("/")
         if (len(filename_arr)) == 6:
@@ -79,21 +80,43 @@ class Run_script:
             task_location = filename
             task_group = "unknown"
         cur = conn.cursor()
-        query1 = cur.mogrify('insert into dw.monitor_concurrent_tasks_log values(%s,%s,%s);',(str(task_uuid), log_message, orignal_command))
-        cur.execute(query1)
-        log_info.info(SEP_TILDE + '监控：插入到monitor_concurrent_tasks_log的命令为:%s' + SEP_TILDE, str(query1))
-        query2 = cur.mogrify('insert into dw.monitor_concurrent_tasks values(%s,%s,%s,%s,%s,%s,%s,%s,%s);',(str(task_group),str(task_location),str(task_name),str(task_uuid),str(thread_id),task_status,start_time_formatted,end_time_formatted,time_spend))
-        cur.execute(query2)
-        log_info.info(SEP_TILDE + '监控：插入到monitor_concurrent_tasks的命令为:%s' + SEP_TILDE, str(query2))
+
+        # 开始插入的task_status等为空
+        task_status = "running"
+        end_time_formatted = None
+        time_spend = None
+
+        query = cur.mogrify('insert into dw.monitor_concurrent_tasks values(%s,%s,%s,%s,%s,%s,%s,%s,%s);', (
+        str(task_group), str(task_location), str(task_name), str(task_uuid), str(thread_id), task_status,
+        start_time_formatted, end_time_formatted, time_spend))
+        cur.execute(query)
+        log_warning.warning(SEP_TILDE + '记录SQL开始的log时间:%s' + SEP_TILDE, str(query))
         conn.commit()
 
-    ## 启动
+    def update_end(self, end_time_formatted, time_spend, task_uuid, task_status, log_message, orignal_command):
+        """往数据库中插入日志"""
+
+        # 更新数据的结束时间
+        cur = conn.cursor()
+        query1 = cur.mogrify("update dw.monitor_concurrent_tasks set task_status=%s, task_end=%s, time_spend=%s where task_uuid=%s;",
+            (task_status, end_time_formatted, time_spend, str(task_uuid)))
+        print query1
+        cur.execute(query1)
+        query2 = cur.mogrify('insert into dw.monitor_concurrent_tasks_log values(%s,%s,%s);',(str(task_uuid), log_message, orignal_command))
+
+        cur.execute(query2)
+        log_warning.warning(SEP_TILDE + '记录SQL结束的log时间:%s' + SEP_TILDE, str(query1))
+        conn.commit()
+
+        ## 启动
+
     def start(self):
         """运行sql脚本"""
         print("程序开始运行:%s" % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
         start_time = time.time()
         start_time_formatted = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         task_uuid = uuid.uuid1()
+        thread_id = threading.current_thread().name
 
         # 加载
         filename = self.filename
@@ -108,7 +131,8 @@ class Run_script:
             len(filename_arr) - 2] + "_" + filename_arr[len(filename_arr) - 1] + ".log"
         command = sqlScript.replace('${analysis_date}', str(analysisdate))
         command = "psql -h 10.4.33.151 -U gpadmin --no-password -d dw -c \"" + command + " \nselect '执行文件：" + filename + "' as filename,now();\" 2>" + errLogName
-
+        # 插入SQL开始 时间
+        self.insert_begin(filename, start_time_formatted, task_uuid, thread_id)
         # 检测异常
         log_message = ""
         result = os.system(command)
@@ -117,7 +141,8 @@ class Run_script:
         log_info.info(SEP_HYPHEN + '执行的命令:%s' + SEP_HYPHEN, str(command))
         log_info.info(SEP_PLUS + '执行的SQL文件:%s' + SEP_PLUS, str(filename))
         log_warning.warning(SEP_PLUS + '执行的SQL文件:%s' + SEP_PLUS, str(filename))
-        log_info.info(SEP_HYPHEN + '执行的SQL文件的当前线程ID为:%s 线程总数为:' + str(len(threading.enumerate())) + SEP_HYPHEN, threading.current_thread().name)
+        log_info.info(SEP_HYPHEN + '执行的SQL文件的当前线程ID为:%s 线程总数为:' + str(len(threading.enumerate())) + SEP_HYPHEN,
+                      threading.current_thread().name)
         print("result:" + str(result))
         errfile = open(errLogName)
         errlog = errfile.read()
@@ -130,17 +155,19 @@ class Run_script:
         end_time = time.time()
         time_spend = end_time - start_time
         end_time_formatted = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        thread_id = threading.current_thread().name
         # 要不要插入，并不是SQL文件本身报错了，只是脚本跑报错了
-        self.insert(filename, start_time_formatted, end_time_formatted, time_spend, task_uuid, thread_id,
-                    task_status, log_message, command)
+
+        self.update_end(end_time_formatted, time_spend, task_uuid, task_status, log_message, command)
+        # self.insert(filename, start_time_formatted, end_time_formatted, time_spend, task_uuid, thread_id,
+        # task_status, log_message, command)
         print("程序结束运行:%s,耗时(秒):%s" % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end_time - start_time))
 
 
 class StoppableThread(threading.Thread):  # 继承父类threading.Thread
     """线程类，参数为threadID和脚本对象script进行初始化"""
-    def __init__(self,threadID,script):
-        super(StoppableThread,self).__init__()
+
+    def __init__(self, threadID, script):
+        super(StoppableThread, self).__init__()
         # threading.Thread.__init__(self)
         self._stop_event = threading.Event()
         self.threadID = threadID
@@ -158,6 +185,7 @@ class StoppableThread(threading.Thread):  # 继承父类threading.Thread
         self.script.start()
         print("Exiting Thread" + str(self.threadID))
         threadmax.release()
+
 
 def get_tasks_by_configure_file(configure_file):
     """输入一个配置文件，返回该配置文件的一个任务列表"""
@@ -178,6 +206,7 @@ def get_tasks_by_configure_file(configure_file):
         task_list.append(file_str)
     return task_list
 
+
 def run_concurrently(task_list):
     """输入一个TASK队列，执行这个TASK队列"""
     filename = task_list
@@ -196,12 +225,14 @@ def run_concurrently(task_list):
 
     for thread in threads:
         threadmax.acquire()
-        thread.setDaemon(False)
+        thread.setDaemon(True)
         thread.start()
     # block the main thread
     for thread in threads:
         thread.join()
     log_warning.warning(SEP_ASTERISK + '结束:这是一个并行队列的结束' + SEP_ASTERISK)
+
+
 if __name__ == '__main__':
     # 命令行参数解析;注意参数不可带空格
     usage = "usage: %prog [options] -f filename "
@@ -243,8 +274,8 @@ if __name__ == '__main__':
         # file name
         threadmax = threading.BoundedSemaphore(3)
         task_queue_list = get_tasks_by_configure_file(filename)
-        log_info.info(SEP_ASTERISK*2 + '读取配置文件:%s' + SEP_ASTERISK*2, str(filename))
-        log_warning.warning(SEP_ASTERISK*2 + '读取配置文件:%s' + SEP_ASTERISK*2, str(filename))
+        log_info.info(SEP_ASTERISK * 2 + '读取配置文件:%s' + SEP_ASTERISK * 2, str(filename))
+        log_warning.warning(SEP_ASTERISK * 2 + '读取配置文件:%s' + SEP_ASTERISK * 2, str(filename))
         ## 对每一个任务队列
         for task_queue in task_queue_list:
             run_concurrently(task_queue)

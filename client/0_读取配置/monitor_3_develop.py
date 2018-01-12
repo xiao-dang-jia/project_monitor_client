@@ -24,7 +24,7 @@ import logging
 import paramiko
 
 
-# import monitor_1_configure
+import monitor_1_configure
 import monitor_2_class
 import monitor_4_post
 
@@ -205,20 +205,10 @@ class Task:
 
 if __name__ == '__main__':
     try:
-        # test
-        # host_obj = monitor_2_class.Host('172.18.21.196','lining-kettle','root','shuyun196','centos')
-        # service_dict = {"m_type":"kettle","db_detail":" ","m_dim":{"version":"pdi","process":{"time_type":"period","time_value":"10s"}}}
-
-        host_obj = monitor_2_class.Host('172.18.21.179','lining-gp','root','shuyun179','centos')
-        db_obj = monitor_2_class.DB('172.18.21.179','data_center','gpadmin','gpadmin','5432','data_center')
-
-        # service_dict = {"m_type":"gp","db_detail":\
-        #     {"host_ip":"172.18.21.179","db_nick":"lining_data_center","username":"gpadmin","password":"gpadmin","port":"5432","database":"data_center"}\
-        #         ,"m_dim":{"version":"4.3.11","check-connections":{"time_type":"period","time_value":"10s"}}}
-        service_dict = {"m_type":"system","m_dim":"cpu-usage","m_interval_type":"period","m_interval_time":"10"}
-        #
-        server_service_obj = monitor_2_class.Server_service(host_obj,db_obj,service_dict)
-        Task(server_service_obj).genSchedule()
+        # 生成服务对象
+        server_service_obj_list = monitor_1_configure.gen_server_service_obj_list()
+        for server_service_obj in server_service_obj_list:
+            Task(server_service_obj).genSchedule()
         sched.start()
     except Exception, e:
         print e

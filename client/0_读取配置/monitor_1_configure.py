@@ -69,10 +69,11 @@ def getHostByProjectnick(config_db_obj,in_project_nick):
         hostip_list.append(host_ip)
     return hostip_list
 
-class MDHostDetail:
-    def __init__(self,project_nick,config_db_obj):
-        self.project_nick = project_nick
+class M_D_HOST:
+    def __init__(self,config_db_obj,project_nick):
         self.config_db_obj = config_db_obj
+        self.project_nick = project_nick
+
 
     def __get_host_nick_list(self):
         """
@@ -88,6 +89,15 @@ class MDHostDetail:
             host_ip = row['host_nick']
             host_nick_list.append(host_ip)
         return host_nick_list
+
+    def get_hostip_by_hostnick(self,host_nick):
+        condition = " where project_nick='%s' and host_nick='%s'" % (self.project_nick, host_nick)
+        # print condition
+        rows = getData(db_obj=self.config_db_obj, table='moniter_m_d_host',
+                                  conditions=condition)
+        if len(rows)!=1:
+            raise ValueError("ERROR: 一个host_nick + project_nick的联合主键对应到了多个host_ip！")
+        return rows[0]['host']
 
     def get_host_object_by_host_nick(self, host_nick):
         """
@@ -123,58 +133,60 @@ class MDHostDetail:
             host_object_list.append(self.get_host_object_by_host_nick(host_nick))
         return host_object_list
 
+class M_D_DB:
+    def __init__(self,project_nick,config_db_obj,host_nick,db_nick):
+        self.config_db_obj = config_db_obj
+        self.project_nick = project_nick
+        self.host_nick = host_nick
+        self.db_nick = db_nick
 
-    def get_db_dict_by_host_nick(self,db_nick):
+    def get_db_object(self):
+        """按照db_nick + project_nick + host_nick 获取 db_obj"""
+        db_dict_conditions = " where project_nick='%s' and db_nick='%s' and host_nick='%s'" % (self.project_nick, self.db_nick, self.host_nick)
+        rows = getData(self.config_db_obj, table = 'moniter_m_d_db', conditions= db_dict_conditions)
 
-        db_dict_conditions = " where project_nick='%s' and db_nick='%s'" % (self.project_nick, db_nick)
-        print('---')
-        rows_f_m_d_db = getData(db_obj=self.config_db_obj, table='moniter_m_d_db',
-                                  conditions=db_dict_conditions)
-        # self.host_ip = host_ip
+        if len(rows)!=1:
+            raise ValueError("ERROR: 一个host_nick + project_nick + db_nick的联合主键对应到了多个database！")
+
+        host_table_obj = M_D_HOST(self.config_db_obj,self.project_nick)
+        host_ip = host_table_obj.get_hostip_by_hostnick(host_nick=self.host_nick)
+
+        user_dict = self.get_db_user_dict()
+
+        db_obj = monitor_2_class.DB(host_ip=host_ip,db_nick=self.db_nick,username=user_dict['username'],
+                                    password=user_dict['password'],port=rows[0]["port"],database=rows[0]['db_name'])
+        return db_obj
+
+    def get_db_user_dict(self):
+        condition = " where project_nick='%s' and db_nick='%s'" % (self.project_nick,self.db_nick)
+        rows = getData(self.config_db_obj, table='moniter_m_d_user_db', conditions=condition)
+        return rows[0]
+
+class M_PROJECT_CHECKLIST:
+    def __init__(self, config_db_obj, project_nick, host_nick):
+        self.config_db_obj = config_db_obj
+        self.project_nick = project_nick
+        self.host_nick = host_nick
         # self.db_nick = db_nick
-        # self.username = username
-        # self.password = password
-        # self.port = port
-        # self.database = database
-        monitor_2_class.DB(rows_f_m_d_db['host'],rows_f_m_d_db['db_nick'],rows_f_m_d_db['host'])
 
-    def get_service_dict_by_host_nick(self,host_nick):
+    def get_service_dict_list(self):
         """
-        返回该host_nick所具备的服务列表，每个列表元素为一个字典
+        返回服务的列表
         :param host_nick:
         :return:
         """
-        project_checklist_condition = " where m_status='on' and project_nick='%s' and host_nick='%s'" % (self.project_nick,host_nick)
-        rows_f_m_project_checklist = getData(db_obj=self.config_db_obj, table='moniter_m_project_checklist', conditions=project_checklist_condition)
+        project_checklist_condition = " where m_status='on' and project_nick='%s' and host_nick='%s'" % (
+                self.project_nick,self.host_nick)
 
+        rows = getData(db_obj=self.config_db_obj, table='moniter_m_project_checklist', conditions=project_checklist_condition)
         m_dim_dict_list = []
-        for row in rows_f_m_project_checklist:
-            m_dim_dict = {}
-            if row['m_type'] == 'gp':
-                # 需要加入数据库配置
-                print('我要生成gp对象')
-                self.get_db_dict_by_host_nick(row['db_nick'])
-                db_detail = None
-            else:
-                db_detail = None
-
-            m_type = row['m_type']
-            m_dim = row['m_dim']
-            m_interval_type = row['m_interval_type']
-            m_interval_time = row['m_interval_time']
-            m_dim_dict = {'db_detail':db_detail,'m_type':m_type, 'm_dim':m_dim, 'm_interval_type':m_interval_type, 'm_interval_time':m_interval_time}
+        for row in rows:
+            m_dim_dict = {'db_nick':row['db_nick'],'m_type':row['m_type'], 'm_dim':row['m_dim'], 'm_interval_type':row['m_interval_type'], 'm_interval_time':row['m_interval_time']}
             m_dim_dict_list.append(m_dim_dict)
         return m_dim_dict_list
 
-
-def genConfigure():
-    host_ip = '172.18.21.245'
-    db_nick = '李宁配置数据库'
-    username = 'root'
-    password = '54321'
-    port = '5432'
-    database = 'mydata'
-
+def gen_server_service_obj_list(host_ip = '172.18.21.245',db_nick = '李宁配置数据库',username = 'root',password = '54321',port = '5432',database = 'mydata'):
+    """return 任务列表"""
     config_db_obj = monitor_2_class.DB(host_ip, db_nick, username, password, port, database)
     # 1. 获取项目信息 project_nick
     data_project = getData(db_obj=config_db_obj,table='moniter_m_project')
@@ -183,22 +195,26 @@ def genConfigure():
     for row in data_project:
         project_nick = row['nick']
 
-    # 2. 实例化一个项目host表对象
-    md_host_detail_obj = MDHostDetail(project_nick,config_db_obj)
-    # 2.1 按照项目名称，获取主机host_obj的列表
-    host_object_list = md_host_detail_obj.get_host_object_list()
+    m_d_host_obj = M_D_HOST(config_db_obj=config_db_obj,project_nick=project_nick)
 
-    # 3. 按照项目名称 和 host_object 获取主机对应的监控项目，以字典的形式返回
-    task_list = []
-    for host_object in host_object_list:
-        m_dim_dict_list = md_host_detail_obj.get_service_dict_by_host_nick(host_object.host_nick)
-        # 按照里面的服务生成相应的任务
-        for m_dim_dict in m_dim_dict_list:
-            # 生成一个单一的任务，每一个任务相当于checklist中的一行
-            task_list.append(monitor_2_class.Server_service(host_object,m_dim_dict))
 
-    # 有了task_list
-    # for task in task_list:
-    #     print task.service_dict
+    server_service_obj_list = []
+    ## 将组合起来生成相应的 Server_sevice
+    for host_obj in m_d_host_obj.get_host_object_list():
+        # 获取该host_nick + project_nick 的服务项目
+        m_project_checklist_obj = M_PROJECT_CHECKLIST(config_db_obj=config_db_obj, project_nick=project_nick, host_nick=host_obj.host_nick)
+        # 配置到一个任务列表中去
 
-genConfigure()
+        for service_dict in m_project_checklist_obj.get_service_dict_list():
+            #### db_object
+            #如果服务类型是gp那么找到gp对象，那么生成db_object。否则置为None
+            if service_dict['db_nick'] is not None:
+                db_obj = M_D_DB(project_nick=project_nick, config_db_obj=config_db_obj, host_nick=host_obj.host_nick,
+                                db_nick=service_dict['db_nick']).get_db_object()
+            else:
+                db_obj = None
+            #### 单个service
+            server_service_obj = monitor_2_class.Server_service(host_obj=host_obj, db_obj=db_obj, service_dict=service_dict)
+
+            server_service_obj_list.append(server_service_obj)
+    return server_service_obj_list
