@@ -214,7 +214,7 @@ def gen_server_service_obj_list(host_ip = '172.18.21.245',db_nick = '李宁配�
             else:
                 db_obj = None
             #### 单个service
-            server_service_obj = monitor_2_class.Server_service(host_obj=host_obj, db_obj=db_obj, service_dict=service_dict)
+            server_service_obj = monitor_2_class.Server_service(project_nick=project_nick,host_obj=host_obj, db_obj=db_obj, service_dict=service_dict)
 
             server_service_obj_list.append(server_service_obj)
     return server_service_obj_list

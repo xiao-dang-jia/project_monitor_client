@@ -41,6 +41,8 @@ def urlPost(postdata):
     data = urllib.urlencode(postdata)
     req = urllib2.Request('http://172.18.21.245:8080/moniter/api/collect', data)
     response = urllib2.urlopen(req)
+    if response.read() == 'OK':
+        print "成功POST一条数据：" + str(postdata)
     return response.read()
 
 def format_json(project_nick,host_nick,db_nick,m_type,m_dim,m_value,m_logger,m_timestamp):

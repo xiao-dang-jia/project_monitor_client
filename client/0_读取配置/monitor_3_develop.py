@@ -109,10 +109,7 @@ def runTaskByTimeType(target,in_time_dict):
     :param in_time_dict: 配置时间详细
     :return:
     """
-    print "我开始运行"
-    # 没有识别为一个函数
-    print type(target)
-    print "我结束运行"
+    print "配置一条任务"
     if in_time_dict['m_interval_type'] == 'period':
         # 需要做个时间转换
         time_value = int(in_time_dict['m_interval_time'])
@@ -123,8 +120,6 @@ def runTaskByTimeType(target,in_time_dict):
         sched.add_job(target, 'cron',
                       year=time_value['year'], month=time_value['month'], day=time_value['day'],
                       hour=time_value['hour'], minute=time_value['minute'])
-
-
 
 # 获取系统版本
 def verifySystemVersion(host_obj):
@@ -152,6 +147,7 @@ class Task:
         根据host_obj和db_obj和service_dict生成配置
         """
         print('生成一个任务')
+        project_nick = self.server_service_obj.project_nick
         host_obj = self.server_service_obj.host_obj
         db_obj = self.server_service_obj.db_obj
         service_dict = self.server_service_obj.service_dict
@@ -160,43 +156,43 @@ class Task:
         if service_dict["m_type"] == 'system' and verifySystemVersion(host_obj):
             # centos
             if host_obj.version == 'centos':
-                centos_monitor_server_obj = monitor_2_class.Centos_monitor_server(host_obj)
+                centos_monitor_server_obj = monitor_2_class.Centos_monitor_server(project_nick,host_obj)
                 # 1. cpu 监控
                 if service_dict["m_dim"] == 'cpu-usage':
                     # -todo 问题出在了加到任务中的过程，函数本身没有问题
-                    runTaskByTimeType(centos_monitor_server_obj.check_CPU(), service_dict)
+                    runTaskByTimeType(centos_monitor_server_obj.check_CPU, service_dict)
                 # 2. disk 监控
                 elif service_dict["m_dim"] == 'disk-usage':
-                    runTaskByTimeType(centos_monitor_server_obj.check_disk(), service_dict)
+                    runTaskByTimeType(centos_monitor_server_obj.check_disk, service_dict)
                 # 3. IOPS 监控
-                elif service_dict["m_dim"] == 'IOPS-usage':
-                    runTaskByTimeType(centos_monitor_server_obj.check_IOPS(), service_dict)
+                elif service_dict["m_dim"] == 'iops-usage':
+                    runTaskByTimeType(centos_monitor_server_obj.check_IOPS, service_dict)
                 # 4. memory 监控
                 elif service_dict["m_dim"] == 'memory-usage':
-                    runTaskByTimeType(centos_monitor_server_obj.check_memory(), service_dict)
+                    runTaskByTimeType(centos_monitor_server_obj.check_memory, service_dict)
         # kettle
         elif service_dict["m_type"] == 'kettle':
             # 如果是kettle
-            kettle_monitor_obj = monitor_2_class.Kettle_monitor(host_obj)
+            kettle_monitor_obj = monitor_2_class.Kettle_monitor(project_nick,host_obj)
 
             if service_dict["m_dim"] == 'process':
-                runTaskByTimeType(kettle_monitor_obj.check_process(),service_dict)
+                runTaskByTimeType(kettle_monitor_obj.check_process,service_dict)
         # gp
         elif service_dict["m_type"] == 'gp':
-            gp_monitor_obj = monitor_2_class.GP_monitor(host_obj,db_obj)
-            if service_dict["m_dim"] == 'check-connections':
-                runTaskByTimeType(gp_monitor_obj.check_connections(), service_dict)
-            elif service_dict["m_dim"] == 'master-status':
-                runTaskByTimeType(gp_monitor_obj.check_master(), service_dict)
-            elif service_dict["m_dim"] == 'segment-status':
-                runTaskByTimeType(gp_monitor_obj.check_segment(), service_dict)
+            gp_monitor_obj = monitor_2_class.GP_monitor(project_nick,host_obj,db_obj)
+            if service_dict["m_dim"] == 'connections-check':
+                runTaskByTimeType(gp_monitor_obj.check_connections, service_dict)
+            elif service_dict["m_dim"] == 'master-check':
+                runTaskByTimeType(gp_monitor_obj.check_master, service_dict)
+            elif service_dict["m_dim"] == 'segment-check':
+                runTaskByTimeType(gp_monitor_obj.check_segment, service_dict)
         # newbi
         elif service_dict["m_type"] == 'newbi':
-            newBI_monitor_obj = monitor_2_class.NewBI_monitor(host_obj)
+            newBI_monitor_obj = monitor_2_class.NewBI_monitor(project_nick,host_obj)
             if service_dict["m_dim"] == 'process':
-                runTaskByTimeType(newBI_monitor_obj.check_process(), service_dict)
+                runTaskByTimeType(newBI_monitor_obj.check_process, service_dict)
             elif service_dict["m_dim"] == 'login':
-                runTaskByTimeType(newBI_monitor_obj.check_login(), service_dict)
+                runTaskByTimeType(newBI_monitor_obj.check_login, service_dict)
 
         else:
             raise ValueError('未知的服务！')
@@ -210,6 +206,7 @@ if __name__ == '__main__':
         for server_service_obj in server_service_obj_list:
             Task(server_service_obj).genSchedule()
         sched.start()
+        print('所有任务都配置完成，启动完成')
     except Exception, e:
         print e
 
