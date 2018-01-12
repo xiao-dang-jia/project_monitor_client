@@ -5,28 +5,12 @@
 function:
 从数据库中读取配置
 """
-import threading
-import time
+
 import sys
-import os
-import string
-import time
-import datetime
-from optparse import OptionParser
-import ConfigParser
-import json
-import abc
-from abc import ABCMeta, abstractmethod
-import traceback
-import psycopg2
 from apscheduler.schedulers.background import BlockingScheduler
 import logging
-import paramiko
-
-
 import monitor_1_configure
 import monitor_2_class
-import monitor_4_post
 
 #解决 二进制str 转 unicode问题
 reload(sys)
@@ -156,7 +140,7 @@ class Task:
         if service_dict["m_type"] == 'system' and verifySystemVersion(host_obj):
             # centos
             if host_obj.version == 'centos':
-                centos_monitor_server_obj = monitor_2_class.Centos_monitor_server(project_nick,host_obj)
+                centos_monitor_server_obj = monitor_2_class.Centos_monitor_server(project_nick,host_obj,service_dict)
                 # 1. cpu 监控
                 if service_dict["m_dim"] == 'cpu-usage':
                     # -todo 问题出在了加到任务中的过程，函数本身没有问题
@@ -173,13 +157,13 @@ class Task:
         # kettle
         elif service_dict["m_type"] == 'kettle':
             # 如果是kettle
-            kettle_monitor_obj = monitor_2_class.Kettle_monitor(project_nick,host_obj)
+            kettle_monitor_obj = monitor_2_class.Kettle_monitor(project_nick,host_obj,service_dict)
 
             if service_dict["m_dim"] == 'process':
                 runTaskByTimeType(kettle_monitor_obj.check_process,service_dict)
         # gp
         elif service_dict["m_type"] == 'gp':
-            gp_monitor_obj = monitor_2_class.GP_monitor(project_nick,host_obj,db_obj)
+            gp_monitor_obj = monitor_2_class.GP_monitor(project_nick,host_obj,db_obj,service_dict)
             if service_dict["m_dim"] == 'connections-check':
                 runTaskByTimeType(gp_monitor_obj.check_connections, service_dict)
             elif service_dict["m_dim"] == 'master-check':
@@ -188,7 +172,7 @@ class Task:
                 runTaskByTimeType(gp_monitor_obj.check_segment, service_dict)
         # newbi
         elif service_dict["m_type"] == 'newbi':
-            newBI_monitor_obj = monitor_2_class.NewBI_monitor(project_nick,host_obj)
+            newBI_monitor_obj = monitor_2_class.NewBI_monitor(project_nick,host_obj,service_dict)
             if service_dict["m_dim"] == 'process':
                 runTaskByTimeType(newBI_monitor_obj.check_process, service_dict)
             elif service_dict["m_dim"] == 'login':
@@ -206,6 +190,7 @@ if __name__ == '__main__':
         for server_service_obj in server_service_obj_list:
             Task(server_service_obj).genSchedule()
         sched.start()
+
         print('所有任务都配置完成，启动完成')
     except Exception, e:
         print e

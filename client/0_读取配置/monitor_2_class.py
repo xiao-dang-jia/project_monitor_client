@@ -86,23 +86,24 @@ class Server_service:
     def __str__(self):
         return "Host:" + str(self.host_obj) + "\tThis is the service i provided:" + str(self.service_dict)
 
-class BaseMonitorAction:
-    """监控类（抽象类）"""
-    def __init__(self):
-        self.type = ''
+# class BaseMonitorAction:
+#     """监控类（抽象类）"""
+#     def __init__(self):
+#         self.type = ''
+#
+#     # @abstractmethod
+#     # def run(self):
+#     #     """按照频率执行监控行为"""
+#     #     pass
 
-    # @abstractmethod
-    # def run(self):
-    #     """按照频率执行监控行为"""
-    #     pass
-
-class Kettle_monitor(BaseMonitorAction):
+class Kettle_monitor():
     """Kettle相关监控"""
-    def __init__(self, project_nick, host_obj):
-        BaseMonitorAction.__init__(self)
-        self.type = 'kettle'
+    # todo 概念不分离：理想中Kettle_monitor应该只管监控行为，不需要service_dict
+    def __init__(self, project_nick, host_obj, service_dict):
+        # BaseMonitorAction.__init__(self)
         self.project_nick = project_nick
         self.host_obj = host_obj
+        self.service_dict = service_dict
 
     def check_process(self):
         """
@@ -114,8 +115,7 @@ class Kettle_monitor(BaseMonitorAction):
         """
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,'kettle-process',"""ps -ef | grep spoon.sh | grep -v 'grep'|wc -l""","""ps -ef | grep spoon.sh | grep -v 'grep'""")
-        m_dim = 'process'
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.type, m_dim, query_result[0],query_result[1],query_result[2])
+        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'], query_result[0],query_result[1],query_result[2])
         monitor_4_post.urlPost(data)
 
 ## 服务器监控接口
@@ -143,21 +143,18 @@ class BaseServerMonitorable(object):
         pass
 
 ## centos 类
-class Centos_monitor_server(BaseMonitorAction,BaseServerMonitorable):
+class Centos_monitor_server(BaseServerMonitorable):
     """继承自BaseServerMonitorable接口和基础监控类 BaseMonitorAction"""
 
-    def __init__(self, project_nick, host_obj):
+    def __init__(self, project_nick, host_obj, service_dict):
         """
         :param host_obj:
         """
         BaseServerMonitorable.__init__(self)
-        BaseMonitorAction.__init__(self)
+        # BaseMonitorAction.__init__(self)
         self.project_nick = project_nick
-        self.type = 'system'
         self.host_obj = host_obj
-
-    def toString(self):
-        return self.host_obj.host_nick + self.type
+        self.service_dict = service_dict
 
         # 增加自己的方法或者重写
     def check_CPU(self):
@@ -165,7 +162,7 @@ class Centos_monitor_server(BaseMonitorAction,BaseServerMonitorable):
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,'use-CPU',"""vmstat|awk 'NR==3 {print $13+$14"%"}'""","""vmstat""")
         m_dim = 'cpu-usage'
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.type, m_dim,
+        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                           query_result[0], query_result[1], query_result[2])
         monitor_4_post.urlPost(data)
         print data
@@ -175,7 +172,7 @@ class Centos_monitor_server(BaseMonitorAction,BaseServerMonitorable):
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,'use-IOPS',"""iostat |awk 'BEGIN{max=0} NR>6 {if($2+0>max+0) max=$2} END{print max"%"}'""","""iostat""")
         m_dim = 'IOPS-usage'
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.type, m_dim,
+        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                           query_result[0], query_result[1], query_result[2])
         monitor_4_post.urlPost(data)
 
@@ -184,7 +181,7 @@ class Centos_monitor_server(BaseMonitorAction,BaseServerMonitorable):
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,'use-disk',"""iostat -dx|awk 'BEGIN{max=0} {if($14+0>max+0) max=$14} END{print max"%"}'""","""iostat""")
         m_dim = 'disk-usage'
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.type, m_dim,
+        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                           query_result[0], query_result[1], query_result[2])
         monitor_4_post.urlPost(data)
 
@@ -193,24 +190,23 @@ class Centos_monitor_server(BaseMonitorAction,BaseServerMonitorable):
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,'use-memory',"""vmstat|awk 'NR==3 {print $4/1024"MB"}'""","""vmstat""")
         m_dim = 'memory-usage'
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.type, m_dim,
+        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                           query_result[0], query_result[1], query_result[2])
         monitor_4_post.urlPost(data)
 
-class NewBI_monitor(BaseMonitorAction):
+class NewBI_monitor():
     """NewBI相关监控"""
-    def __init__(self, project_nick,host_obj):
-        BaseMonitorAction.__init__(self)
+    def __init__(self, project_nick,host_obj,service_dict):
+        # BaseMonitorAction.__init__(self)
         self.project_nick = project_nick
-        self.type = 'newbi'
         self.host_obj = host_obj
+        self.service_dict = service_dict
 
     def check_process(self):
         """查询newbi进程是否存在"""
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,'process',"""ps -ef | grep jetty | grep -v "grep" | wc -l""","""ps -ef | grep jetty | grep -v 'grep'""")
-        m_dim = 'process'
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.type, m_dim,
+        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                           query_result[0], query_result[1], query_result[2])
         monitor_4_post.urlPost(data)
 
@@ -228,56 +224,55 @@ def db_connection(db_object):
     conn = psycopg2.connect(database=db_object.database, user=db_object.username,
                             password=db_object.password, host=db_object.host_ip,
                             port=db_object.port)
-    conn.close()
     return conn
 
-class GP_monitor(BaseMonitorAction):
+class GP_monitor():
     """GP相关监控"""
-    def __init__(self,project_nick,host_obj,db_object):
-        BaseMonitorAction.__init__(self)
-        self.type = 'gp'
+    def __init__(self,project_nick,host_obj,db_object,service_dict):
+        # BaseMonitorAction.__init__(self)
         self.project_nick = project_nick
         self.host_obj = host_obj
         self.db_object = db_object
+        self.service_dict = service_dict
 
-    def db_fun_query(self,m_dim,query_m_value,query_m_log):
+    def db_fun_query(self,query_m_value,query_m_log):
         conn = db_connection(self.db_object)
-        print("执行gp查询中")
-        m_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         cur = conn.cursor()
+        m_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
         # m_value
-        print query_m_value
         cur.execute(query_m_value)
         m_value = cur.fetchone()[0]
-
         # m_log
-        print query_m_log
         cur.execute(query_m_log)
         query2_result = list(cur.fetchone())
         # eleminate None value
         query2_result = [str(x) for x in query2_result if x is not None]
         m_log = " ".join(query2_result)
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick,self.db_object.db_nick, self.type, m_dim, m_value, m_log, m_timestamp)
+        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick,self.db_object.db_nick,
+                                          self.service_dict['m_type'], self.service_dict['m_dim'],m_value,m_log,m_timestamp)
+        print self.service_dict['m_type']
         cur.close()
+        conn.close()
         return(data)
 
 
     def check_connections(self):
         """检查数据库连接数"""
-        data = self.db_fun_query('check-connections',"""select count(1) from pg_stat_activity;""","""select count(1) from pg_stat_activity;""")
+        data = self.db_fun_query("""select count(1) from pg_stat_activity;""","""select count(1) from pg_stat_activity;""")
         print data
         monitor_4_post.urlPost(data)
 
 
     def check_master(self):
         """检查数据库MASTER节点是否起着"""
-        data = self.db_fun_query('master-status', """select case when status='u' then 'available' else 'fail' end as master状态 from gp_segment_configuration where content='-1' and role='p';""",
+        data = self.db_fun_query("""select status from gp_segment_configuration where content='-1' and role='p';""",
 """select * from gp_segment_configuration where content='-1' and role='p';""")
         monitor_4_post.urlPost(data)
 
     def check_segment(self):
         """检查数据库segment节点是否起着"""
-        data = self.db_fun_query('segment-status', """select case when status='u' then 'available' else 'fail' end as segment状态 from gp_segment_configuration where content!='-1' and role='p';""",
+        data = self.db_fun_query("""select status from gp_segment_configuration where content!='-1' and role='p';""",
 """select * from gp_segment_configuration where content!='-1' and role='p';""")
         monitor_4_post.urlPost(data)
 
