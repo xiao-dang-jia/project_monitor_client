@@ -206,4 +206,5 @@ def gen_server_service_obj_list(host_ip, db_nick, username, password
             #2.3 生成单个server_service_obj
             server_service_obj = monitor_2_class.Server_service(project_nick=project_nick,host_obj=host_obj, db_obj=db_obj, service_dict=service_dict)
             server_service_obj_list.append(server_service_obj)
+    print "monitor_1_configure: 生成项目配置信息完毕!"
     return server_service_obj_list

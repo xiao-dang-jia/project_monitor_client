@@ -25,13 +25,13 @@ if __name__ == '__main__':
         database = 'mydata'
 
         # 生成配置列表
-        server_service_obj_list = monitor_1_configure.gen_server_service_obj_list(host_ip, db_nick, username, username,
+        server_service_obj_list = monitor_1_configure.gen_server_service_obj_list(host_ip, db_nick, username,
                                                                                   password, port, database)
         for server_service_obj in server_service_obj_list:
             monitor_3_develop.Task(server_service_obj).genSchedule()
+        print('所有任务配置完成!')
         # 启动所有的任务
         monitor_3_develop.sched.start()
-
-        print('所有任务都配置完成，启动完成')
+        print('所有任务启动完成!')
     except Exception, e:
         print e
