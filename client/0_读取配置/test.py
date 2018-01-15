@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
+# todo  1. 线程安全 使用队列 2. 移除死掉的线程
 
 import threading
 import sys
@@ -84,22 +85,22 @@ class Run_script:
         # 开始插入的task_status等为空
         task_status = "running"
         end_time_formatted = None
-        time_spend = None
+        task_spend = None
 
         query = cur.mogrify('insert into dw.monitor_concurrent_tasks values(%s,%s,%s,%s,%s,%s,%s,%s,%s);', (
         str(task_group), str(task_location), str(task_name), str(task_uuid), str(thread_id), task_status,
-        start_time_formatted, end_time_formatted, time_spend))
+        start_time_formatted, end_time_formatted, task_spend))
         cur.execute(query)
         log_warning.warning(SEP_TILDE + '记录SQL开始的log时间:%s' + SEP_TILDE, str(query))
         conn.commit()
 
-    def update_end(self, end_time_formatted, time_spend, task_uuid, task_status, log_message, orignal_command):
+    def update_end(self, end_time_formatted, task_spend, task_uuid, task_status, log_message, orignal_command):
         """往数据库中插入日志"""
 
         # 更新数据的结束时间
         cur = conn.cursor()
-        query1 = cur.mogrify("update dw.monitor_concurrent_tasks set task_status=%s, task_end=%s, time_spend=%s where task_uuid=%s;",
-            (task_status, end_time_formatted, time_spend, str(task_uuid)))
+        query1 = cur.mogrify("update dw.monitor_concurrent_tasks set task_status=%s, task_end=%s, task_spend=%s where task_uuid=%s;",
+            (task_status, end_time_formatted, task_spend, str(task_uuid)))
         print query1
         cur.execute(query1)
         query2 = cur.mogrify('insert into dw.monitor_concurrent_tasks_log values(%s,%s,%s);',(str(task_uuid), log_message, orignal_command))
@@ -130,7 +131,7 @@ class Run_script:
         errLogName = ERR_LOG_PATH + filename_arr[len(filename_arr) - 3] + "_" + filename_arr[
             len(filename_arr) - 2] + "_" + filename_arr[len(filename_arr) - 1] + ".log"
         command = sqlScript.replace('${analysis_date}', str(analysisdate))
-        command = "psql -h 10.4.33.151 -U gpadmin --no-password -d dw -c \"" + command + " \nselect '执行文件：" + filename + "' as filename,now();\" 2>" + errLogName
+        command = "date '+%Y-%m-%d %H:%M:%S' | xargs echo '命令开始前' >> /tmp/kettle/tmp_command_history_20180112.log;psql -h 10.4.33.151 -U gpadmin --no-password -d dw -c \"" + command + " \nselect '执行文件：" + filename + "' as filename,now();\";date '+%Y-%m-%d %H:%M:%S' | xargs echo '命令结束后' >> /tmp/kettle/tmp_command_history_20180112.log; 2>" + errLogName
         # 插入SQL开始 时间
         self.insert_begin(filename, start_time_formatted, task_uuid, thread_id)
         # 检测异常
@@ -153,12 +154,12 @@ class Run_script:
             ## 如果报错，那么状态为失败
             task_status = "fail"
         end_time = time.time()
-        time_spend = end_time - start_time
+        task_spend = end_time - start_time
         end_time_formatted = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         # 要不要插入，并不是SQL文件本身报错了，只是脚本跑报错了
 
-        self.update_end(end_time_formatted, time_spend, task_uuid, task_status, log_message, command)
-        # self.insert(filename, start_time_formatted, end_time_formatted, time_spend, task_uuid, thread_id,
+        self.update_end(end_time_formatted, task_spend, task_uuid, task_status, log_message, command)
+        # self.insert(filename, start_time_formatted, end_time_formatted, task_spend, task_uuid, thread_id,
         # task_status, log_message, command)
         print("程序结束运行:%s,耗时(秒):%s" % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end_time - start_time))
 

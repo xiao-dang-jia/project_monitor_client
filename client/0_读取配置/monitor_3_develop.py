@@ -3,13 +3,12 @@
 # Created by youshaox on 5/1/18
 """
 function:
-从数据库中读取配置
+
 """
 
 import sys
 from apscheduler.schedulers.background import BlockingScheduler
 import logging
-import monitor_1_configure
 import monitor_2_class
 
 #解决 二进制str 转 unicode问题
@@ -19,16 +18,9 @@ sys.setdefaultencoding('utf-8')
 logging.basicConfig()
 sched=BlockingScheduler()
 
-# 配置数据库
-configure_hostip = 'localhost'
-configure_username = 'youshaox'
-configure_password = '12345'
-configure_database = 'monitor_configuration'
-
 ################
 # 公共函数区
 ################
-
 def toDict(**kwargs):
     """
     格式化为字典
@@ -39,34 +31,14 @@ def toDict(**kwargs):
         globals()[key] = kwargs[key]
     return kwargs
 
-# def getTransformedTime(in_time_str):
-#     """
-#     将period类型时间转换为统一的单位（秒）
-#     :param in_time_str:
-#     :return: 返回时间（int）
-#     """
-#     # 截取数字
-#     time_str_arr = in_time_str.split(" ")
-#     time_value = time_str_arr[0]
-#     time_unit = time_str_arr[1]
-#
-#     if time_unit == 's':
-#         return int(time_value)
-#     if time_unit == 'min':
-#         return int(time_value)*60
-#     if time_unit == 'hour':
-#         return int(time_value)*3600
-#     else:
-#         return 0
-#         # raise ValueError("暂时不支持当前时间格式。请按当前时间格式输入：数字 s/min/hour")
-
-
+# todo 商讨规定时间格式
 def getFormattedTime(in_time_str):
     """
     格式化时间
     :param in_time_str: 配置时间
     :return: 格式化的配置时间（字典）
     :raise TypeError: 如果输入的字符串格式不符合
+    2018-
     """
     try:
         time_str_arr = in_time_str.split(' ')
@@ -85,15 +57,13 @@ def getFormattedTime(in_time_str):
     except Exception as e:
         raise TypeError('定点执行时间配置错误!%s' %e)
 
-def runTaskByTimeType(target,in_time_dict):
+def runTaskByTimeType(target, in_time_dict):
     """
     添加计划任务
-
-    :param target: 目标执行函数
+    :param target: 任务目标执行函数对象
     :param in_time_dict: 配置时间详细
     :return:
     """
-    print "配置一条任务"
     if in_time_dict['m_interval_type'] == 'period':
         # 需要做个时间转换
         time_value = int(in_time_dict['m_interval_time'])
@@ -113,7 +83,7 @@ def verifySystemVersion(host_obj):
     :return: 系统版本(String)
     """
     ssh = monitor_2_class.ssh_server(host_obj)
-    command = """cat /etc/issue|grep -i "%s\""""%host_obj.version
+    command = """cat /etc/issue|grep -i "%s\"""" %host_obj.version
     ssh_stdin, ssh_stdout_basic, ssh_stderr = ssh.exec_command(command)
     # 判断系统版本
     if ssh_stdout_basic.read() is not None and len(ssh_stderr.read()) == 0:
@@ -121,21 +91,20 @@ def verifySystemVersion(host_obj):
     else:
         return False
 
-
 class Task:
-    def __init__(self,server_service_obj):
+    def __init__(self, server_service_obj):
         self.server_service_obj = server_service_obj
 
     def genSchedule(self):
         """
         根据host_obj和db_obj和service_dict生成配置
         """
-        print('生成一个任务')
         project_nick = self.server_service_obj.project_nick
         host_obj = self.server_service_obj.host_obj
         db_obj = self.server_service_obj.db_obj
         service_dict = self.server_service_obj.service_dict
 
+        # !注意: 需要保证配置数据库中命名与判断内容一致。
         # server
         if service_dict["m_type"] == 'system' and verifySystemVersion(host_obj):
             # centos
@@ -143,7 +112,6 @@ class Task:
                 centos_monitor_server_obj = monitor_2_class.Centos_monitor_server(project_nick,host_obj,service_dict)
                 # 1. cpu 监控
                 if service_dict["m_dim"] == 'cpu-usage':
-                    # -todo 问题出在了加到任务中的过程，函数本身没有问题
                     runTaskByTimeType(centos_monitor_server_obj.check_CPU, service_dict)
                 # 2. disk 监控
                 elif service_dict["m_dim"] == 'disk-usage':
@@ -177,21 +145,8 @@ class Task:
                 runTaskByTimeType(newBI_monitor_obj.check_process, service_dict)
             elif service_dict["m_dim"] == 'login':
                 runTaskByTimeType(newBI_monitor_obj.check_login, service_dict)
-
         else:
             raise ValueError('未知的服务！')
 
 
-
-if __name__ == '__main__':
-    try:
-        # 生成服务对象
-        server_service_obj_list = monitor_1_configure.gen_server_service_obj_list()
-        for server_service_obj in server_service_obj_list:
-            Task(server_service_obj).genSchedule()
-        sched.start()
-
-        print('所有任务都配置完成，启动完成')
-    except Exception, e:
-        print e
 
