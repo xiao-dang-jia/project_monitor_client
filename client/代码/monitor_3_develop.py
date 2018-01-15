@@ -3,7 +3,8 @@
 # Created by youshaox on 5/1/18
 """
 function:
-
+生成调度任务。
+通过mointor_1_configure.py获得配置信息，以monitor_2_class中的监控任务为模版，生成调度任务。
 """
 
 import sys
