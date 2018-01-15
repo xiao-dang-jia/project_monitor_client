@@ -16,8 +16,12 @@ password = 'xxxx'
 port = 'xxxx'
 database = 'xxxx'
 
+3. 配置配置数据表
+0_initialisation_configure_db.sql
+
+
 notes:
-* 需要包装配置表的表名是一致的
+* 需要配置表的表名是一致的
 * 字段命名是一致的
 
 ##############################
