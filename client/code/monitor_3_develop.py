@@ -9,6 +9,7 @@ function:
 
 import sys
 from apscheduler.schedulers.background import BlockingScheduler
+import apscheduler
 import logging
 import monitor_2_class
 
@@ -17,7 +18,8 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 
 logging.basicConfig()
-sched=BlockingScheduler()
+sched = apscheduler.BlockingScheduler\
+    ()
 
 ################
 # 公共函数区
