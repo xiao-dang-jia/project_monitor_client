@@ -1,20 +1,16 @@
 ##############################
-得用2.7环境
-apscheduler 不支持2.6了
-
 # 使用方法：
+##############################
+
+注意: 得用2.7环境, apscheduler 不支持2.6了
+
+0. 首先安装python2.7
 
 1. 安装python2 及其相关依赖包
 pip install apscheduler
 yum install MySQL-python
 pip install paramiko
 pip install psycopg2
-
-## 测试
-import apscheduler
-import MySQLdb
-import paramiko
-import psycopg2
 
 2. 在monitor_0_main.py 中配置 "监控配置数据库信息"：
 例子:
@@ -23,7 +19,7 @@ db_nick = 'xxxx'
 username = 'xxxx'
 password = 'xxxx'
 port = 'xxxx'
-database = 'xxxx'
+database = 'xxxx' # 这个是数据库名 很重要
 
 3. 配置配置数据表
 0_initialisation_configure_db.sql
