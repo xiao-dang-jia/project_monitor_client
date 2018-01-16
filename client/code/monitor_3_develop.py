@@ -18,8 +18,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 
 logging.basicConfig()
-sched = apscheduler.BlockingScheduler\
-    ()
+sched = BlockingScheduler()
 
 ################
 # 公共函数区
@@ -142,13 +141,16 @@ class Task:
                 runTaskByTimeType(gp_monitor_obj.check_master, service_dict)
             elif service_dict["m_dim"] == 'segment-check':
                 runTaskByTimeType(gp_monitor_obj.check_segment, service_dict)
+            elif service_dict["m_dim"] == 'overtime_query-check':
+                runTaskByTimeType(gp_monitor_obj.check_overtime_sql, service_dict)
+
         # newbi
         elif service_dict["m_type"] == 'newbi':
-            newBI_monitor_obj = monitor_2_class.NewBI_monitor(project_nick,host_obj,service_dict)
+            newbi_monitor_obj = monitor_2_class.NewBI_monitor(project_nick,host_obj,service_dict)
             if service_dict["m_dim"] == 'process':
-                runTaskByTimeType(newBI_monitor_obj.check_process, service_dict)
+                runTaskByTimeType(newbi_monitor_obj.check_process, service_dict)
             elif service_dict["m_dim"] == 'login':
-                runTaskByTimeType(newBI_monitor_obj.check_login, service_dict)
+                runTaskByTimeType(newbi_monitor_obj.check_login, service_dict)
         else:
             raise ValueError('未知的服务！')
 

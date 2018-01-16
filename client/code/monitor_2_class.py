@@ -240,7 +240,7 @@ class GP_monitor():
         self.db_object = db_object
         self.service_dict = service_dict
 
-    def db_fun_query(self,query_m_value, query_m_log):
+    def db_fun_query(self, query_m_value, query_m_log):
         """
         执行数据库系统表查询
         :param query_m_value: 查询监控值的sql语句
@@ -255,12 +255,21 @@ class GP_monitor():
         cur.execute(query_m_value)
         m_value = cur.fetchone()[0]
         # m_log
+        print query_m_log
         cur.execute(query_m_log)
-        query2_result = list(cur.fetchone())
+        # 对数据做处理
+        query2_result_org = cur.fetchone()
 
-        # eleminate None value
-        query2_result = [str(x) for x in query2_result if x is not None]
-        m_log = " ".join(query2_result)
+        # 乳沟查询数据为空，记录查询语句
+        if query2_result_org is None:
+            m_log = query_m_log
+        else:
+            query2_result = list(query2_result_org)
+
+            # 将查询结果连接起来，方便日志记录
+            # eleminate None value
+            query2_result = [str(x) for x in query2_result if x is not None]
+            m_log = " ".join(query2_result)
         data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick,self.db_object.db_nick,
                                           self.service_dict['m_type'], self.service_dict['m_dim'], m_value, m_log, m_timestamp)
 
@@ -290,11 +299,14 @@ class GP_monitor():
         monitor_4_post.urlPost(data)
 
     def check_overtime_sql(self):
-        """检查超时sql"""
-        # todo
-        pass
+        """检查超时sql，返回超时SQL数量"""
+        data = self.db_fun_query("""SELECT count(1) FROM pg_stat_activity WHERE current_query != '<IDLE>' AND
+current_query NOT ILIKE '%pg_stat_activity%' AND age(clock_timestamp(),query_start)>= '2 hours'::interval;"""
+                                 ,"""SELECT procpid,query_start,age(clock_timestamp(),query_start),usename,current_query FROM pg_stat_activity
+WHERE current_query != '<IDLE>' AND current_query NOT ILIKE '%pg_stat_activity%' AND age(clock_timestamp(),query_start)
+>= '2 hours'::interval ORDER BY query_start desc;""")
+        monitor_4_post.urlPost(data)
 
 # 数据逻辑监控类
 class DataLogic():
-    # todo
     pass
