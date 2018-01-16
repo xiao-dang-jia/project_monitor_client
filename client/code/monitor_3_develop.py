@@ -9,8 +9,8 @@ function:
 
 import sys
 from apscheduler.schedulers.background import BlockingScheduler
-import apscheduler
 import logging
+import math
 import monitor_2_class
 
 #解决 二进制str 转 unicode问题
@@ -33,29 +33,35 @@ def toDict(**kwargs):
         globals()[key] = kwargs[key]
     return kwargs
 
-# todo 商讨规定时间格式
 def getFormattedTime(in_time_str):
     """
-    格式化时间
+    格式化时间。
+    如果m_interval_type(间隔类型)是time，那么我们以00:00为准，将时间点换算为秒。
+    比如：每天8：59跑数据，那么就是 8*3600 + 59*60 = 32340
+    m_interval_value 就定为 32340
+
     :param in_time_str: 配置时间
     :return: 格式化的配置时间（字典）
     :raise TypeError: 如果输入的字符串格式不符合
     2018-
     """
     try:
-        time_str_arr = in_time_str.split(' ')
 
-        date_str = time_str_arr[0]
-        time_str = time_str_arr[1]
+        time_int = int(in_time_str)
 
-        # 处理日期
-        out_year = date_str.split('-')[0]
-        out_month = date_str.split('-')[1]
-        out_day = date_str.split('-')[2]
+        # 获得小时
+        out_hour = math.floor(time_int/3600)
+        # 获得分钟
+        out_minute = (time_int - out_hour*3600)/60
 
-        out_hour = time_str.split(':')[0]
-        out_minute = time_str.split(':')[1]
-        return toDict(year=out_year, month=out_month, day=out_day, hour=out_hour, minute=out_minute)
+        # hour: 0-23
+        if not (int(out_hour)>=0 and int(out_hour)<=23):
+            raise ValueError("小时不在0-23之间")
+        # minute: 0-59
+        if not (int(out_hour)>=0 and int(out_hour)<=59):
+            raise ValueError("分钟不在0-59之间")
+
+        return toDict(hour=out_hour, minute=out_minute)
     except Exception as e:
         raise TypeError('定点执行时间配置错误!%s' %e)
 
@@ -74,9 +80,7 @@ def runTaskByTimeType(target, in_time_dict):
     elif in_time_dict['m_interval_type'] == 'time':
         # 获取格式化时间
         time_value = getFormattedTime(in_time_dict['m_interval_time'])
-        sched.add_job(target, 'cron',
-                      year=time_value['year'], month=time_value['month'], day=time_value['day'],
-                      hour=time_value['hour'], minute=time_value['minute'])
+        sched.add_job(target, 'cron', hour=int(time_value['hour']), minute=int(time_value['minute']))
 
 # 获取系统版本
 def verifySystemVersion(host_obj):
