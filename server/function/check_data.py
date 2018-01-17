@@ -31,8 +31,8 @@ def check_real_report(curtime,delta):
 			#将real记录逐条与监控阀值进行匹配，若匹配到，则根据监控阀值的各项设置进行检查判定，去生成相关记录	
 			for result in results:
 				try:
-					sql = "SELECT * FROM moniter_m_project_checklist WHERE project_nick = %s AND host_nick = %s AND db_nick = %s AND m_type = %s AND m_status = 'on'"
-					cursor.execute(sql, (str(result['project_nick']),str(result['host_nick']),str(result['db_nick']),str(result['m_type'])))
+					sql = "SELECT * FROM moniter_m_project_checklist WHERE project_nick = %s AND host_nick = %s AND db_nick = %s AND m_type = %s AND m_dim = %s AND m_status = 'on'"
+					cursor.execute(sql, (str(result['project_nick']),str(result['host_nick']),str(result['db_nick']),str(result['m_type']),str(result['m_dim'])))
 					logging.info("正在监控的数据是：")
 					for k,v in result.items():
 						logging.info(k + ' : ' + str(v))
@@ -46,6 +46,9 @@ def check_real_report(curtime,delta):
 						logging.info('Next_checktime为空，执行初始化')
 						result_check['Next_checktime'] = curtime - datetime.timedelta(minutes = result_check['m_interval_time']/60) 
 						logging.info('初始化完成，Next_checktime：%s',str(result_check['Next_checktime']))
+					logging.info("匹配到的监控阀值是:")
+					for k,v in result_check.items():
+						logging.info(k + ' : ' + str(v))	
 					#用于report入库参考阀值时间
 					curNext_checktime =  result_check['Next_checktime'] 
 					#根据监控阀值时间类型，选择阀值时间判定分支,并更新下一次监控阀值的时间Next_checktime
