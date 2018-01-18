@@ -10,7 +10,7 @@ from abc import ABCMeta, abstractmethod
 import time
 import paramiko
 import psycopg2
-import monitor_4_post
+import api
 
 #解决 二进制str 转 unicode问题
 reload(sys)
@@ -58,7 +58,6 @@ def ssh_server(host_obj):
 def fun_query(ssh,query_m_value,query_m_log):
     """
     执行ssh 返回查询值结果和查询日志结果
-    :param self:
     :param ssh: ssh目标对象
     :param m_dim: 侦测维度
     :param query_m_value: 查询结果的语句
@@ -120,10 +119,10 @@ class Kettle_monitor:
         # 2. 查询数据
         query_result = fun_query(ssh, """ps -ef | grep spoon.sh | grep -v 'grep'|wc -l""", """ps -ef | grep spoon.sh | grep -v 'grep'""")
         # 3. 格式化数据
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'],
-                                          self.service_dict['m_dim'], query_result[0], query_result[1], query_result[2])
+        data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'],
+                               self.service_dict['m_dim'], query_result[0], query_result[1], query_result[2])
         # 4. 向接口中post数据
-        monitor_4_post.urlPost(data)
+        api.urlPost(data)
 
 ## 服务器监控接口
 class BaseServerMonitorable(object):
@@ -171,33 +170,33 @@ class Centos_monitor_server(BaseServerMonitorable):
         """检查CPU"""
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,"""vmstat|awk 'NR==3 {print $13+$14"%"}'""","""vmstat""")
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
-                                          query_result[0], query_result[1], query_result[2])
-        monitor_4_post.urlPost(data)
+        data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
+                               query_result[0], query_result[1], query_result[2])
+        api.urlPost(data)
 
     def check_IOPS(self):
         """检查IOPS"""
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,"""iostat |awk 'BEGIN{max=0} NR>6 {if($2+0>max+0) max=$2} END{print max"%"}'""","""iostat""")
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
-                                          query_result[0], query_result[1], query_result[2])
-        monitor_4_post.urlPost(data)
+        data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
+                               query_result[0], query_result[1], query_result[2])
+        api.urlPost(data)
 
     def check_disk(self):
         """检查DISK"""
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,"""iostat -dx|awk 'BEGIN{max=0} {if($14+0>max+0) max=$14} END{print max"%"}'""","""iostat""")
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
-                                          query_result[0], query_result[1], query_result[2])
-        monitor_4_post.urlPost(data)
+        data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
+                               query_result[0], query_result[1], query_result[2])
+        api.urlPost(data)
 
     def check_memory(self):
         """检查MEMORY"""
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,"""vmstat|awk 'NR==3 {print $4/1024"MB"}'""","""vmstat""")
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
-                                          query_result[0], query_result[1], query_result[2])
-        monitor_4_post.urlPost(data)
+        data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
+                               query_result[0], query_result[1], query_result[2])
+        api.urlPost(data)
 
 class NewBI_monitor():
     """NewBI相关监控"""
@@ -211,9 +210,9 @@ class NewBI_monitor():
         """检查newbi进程"""
         ssh = ssh_server(self.host_obj)
         query_result = fun_query(ssh,"""ps -ef | grep jetty | grep -v "grep" | wc -l""","""ps -ef | grep jetty | grep -v 'grep'""")
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
-                                          query_result[0], query_result[1], query_result[2])
-        monitor_4_post.urlPost(data)
+        data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
+                               query_result[0], query_result[1], query_result[2])
+        api.urlPost(data)
 
     def check_login(self,_ssh):
         """查询web是否可以访问"""
@@ -270,8 +269,8 @@ class GP_monitor():
             # eleminate None value
             query2_result = [str(x) for x in query2_result if x is not None]
             m_log = " ".join(query2_result)
-        data = monitor_4_post.format_json(self.project_nick, self.host_obj.host_nick,self.db_object.db_nick,
-                                          self.service_dict['m_type'], self.service_dict['m_dim'], m_value, m_log, m_timestamp)
+        data = api.format_json(self.project_nick, self.host_obj.host_nick, self.db_object.db_nick,
+                               self.service_dict['m_type'], self.service_dict['m_dim'], m_value, m_log, m_timestamp)
 
         cur.close()
         conn.close()
@@ -280,7 +279,7 @@ class GP_monitor():
     def check_connections(self):
         """检查数据库连接数"""
         data = self.db_fun_query("""select count(1) from pg_stat_activity;""","""select count(1) from pg_stat_activity;""")
-        monitor_4_post.urlPost(data)
+        api.urlPost(data)
 
     def check_master(self):
         """
@@ -290,13 +289,13 @@ class GP_monitor():
         """
         data = self.db_fun_query("""select status from gp_segment_configuration where content='-1' and role='p';""",
                                  """select * from gp_segment_configuration where content='-1' and role='p';""")
-        monitor_4_post.urlPost(data)
+        api.urlPost(data)
 
     def check_segment(self):
         """检查数据库segment节点是否起着"""
         data = self.db_fun_query("""select status from gp_segment_configuration where content!='-1' and role='p';""",
                                  """select * from gp_segment_configuration where content!='-1' and role='p';""")
-        monitor_4_post.urlPost(data)
+        api.urlPost(data)
 
     def check_overtime_sql(self):
         """检查超时sql，返回超时SQL数量"""
@@ -305,7 +304,7 @@ current_query NOT ILIKE '%pg_stat_activity%' AND age(clock_timestamp(),query_sta
                                  ,"""SELECT procpid,query_start,age(clock_timestamp(),query_start),usename,current_query FROM pg_stat_activity
 WHERE current_query != '<IDLE>' AND current_query NOT ILIKE '%pg_stat_activity%' AND age(clock_timestamp(),query_start)
 >= '2 hours'::interval ORDER BY query_start desc;""")
-        monitor_4_post.urlPost(data)
+        api.urlPost(data)
 
 # 数据逻辑监控类
 class DataLogic():

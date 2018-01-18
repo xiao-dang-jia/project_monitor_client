@@ -5,7 +5,8 @@
 function:
 从配置数据库中读取配置，生成 server_service_obj_list，供monitor_3_develop生成任务。
 
- * server_service_obj_list 由三部分生成：host_obj 主机对象 + db_obj对象 + server_service_dict字典
+ * server_service_obj_list 由四部分生成：project_nick + host_obj主机对象 + db_obj对象 + server_service_dict字典
+ ** project_nick 项目昵称
  ** host_obj 会具备一个host所具备的属性
  ** db_obj 具备数据库所具备的属性
  ** server_service_dict 是这个主机上的监控项配置字典。如：{"m_type":"system", "m_dim":"cpu-check", "time_interval_type":"period", "":""}
@@ -13,7 +14,7 @@ function:
 """
 import sys
 import MySQLdb
-import monitor_2_class
+import monitor_class
 
 #解决 二进制str 转 unicode问题
 reload(sys)
@@ -89,7 +90,7 @@ class M_D_HOST:
             username = row['username']
             password = row['password']
 
-        host_object = monitor_2_class.Host(host_ip, host_nick, username, password=password, version=server_type)
+        host_object = monitor_class.Host(host_ip, host_nick, username, password=password, version=server_type)
         return host_object
 
     def get_host_object_list(self):
@@ -128,8 +129,8 @@ class M_D_DB:
 
         user_dict = self.get_db_user_dict()
 
-        db_obj = monitor_2_class.DB(host_ip=host_ip, db_nick=self.db_nick, username=user_dict['username'],
-                                    password=user_dict['password'], port=rows[0]["port"], database=rows[0]['db_name'])
+        db_obj = monitor_class.DB(host_ip=host_ip, db_nick=self.db_nick, username=user_dict['username'],
+                                  password=user_dict['password'], port=rows[0]["port"], database=rows[0]['db_name'])
         return db_obj
 
     def get_db_user_dict(self):
@@ -137,7 +138,7 @@ class M_D_DB:
         通过 project_nick + db_nick 获取db的用户的信息
         :return:
         """
-        condition = " where project_nick='%s' and db_nick='%s'" % (self.project_nick,self.db_nick)
+        condition = " where project_nick='%s' and db_nick='%s'" % (self.project_nick, self.db_nick)
         rows = getData(self.config_db_obj, table='moniter_m_d_user_db', conditions=condition)
         return rows[0]
 
@@ -166,8 +167,7 @@ class M_PROJECT_CHECKLIST:
             m_dim_dict_list.append(m_dim_dict)
         return m_dim_dict_list
 
-def gen_server_service_obj_list(host_ip, db_nick, username, password
-                                ,port ,database):
+def gen_server_service_obj_list(config_db_obj):
     """
     返回任务的列表
     :param host_ip:
@@ -179,10 +179,9 @@ def gen_server_service_obj_list(host_ip, db_nick, username, password
     :return: server_service_obj_list
     """
     # 初始化配置数据库连接
-    config_db_obj = monitor_2_class.DB(host_ip, db_nick, username, password, port, database)
-
     # 1. 获取项目信息 project_nick
-    data_project = getData(db_obj=config_db_obj,table='moniter_m_project')
+    # todo 是否这样能完全确定一个项目
+    data_project = getData(db_obj=config_db_obj, table='moniter_m_project', conditions=" where nick='李宁'")
     for row in data_project:
         project_nick = row['nick']
 
@@ -204,7 +203,7 @@ def gen_server_service_obj_list(host_ip, db_nick, username, password
             else:
                 db_obj = None
             #2.3 生成单个server_service_obj
-            server_service_obj = monitor_2_class.Server_service(project_nick=project_nick,host_obj=host_obj, db_obj=db_obj, service_dict=service_dict)
+            server_service_obj = monitor_class.Server_service(project_nick=project_nick, host_obj=host_obj, db_obj=db_obj, service_dict=service_dict)
             server_service_obj_list.append(server_service_obj)
     print "monitor_1_configure: 生成项目配置信息完毕!"
     return server_service_obj_list

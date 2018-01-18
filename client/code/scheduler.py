@@ -11,7 +11,7 @@ import sys
 from apscheduler.schedulers.background import BlockingScheduler
 import logging
 import math
-import monitor_2_class
+import monitor_class
 
 #解决 二进制str 转 unicode问题
 reload(sys)
@@ -89,7 +89,7 @@ def verifySystemVersion(host_obj):
     :param host_obj:
     :return: 系统版本(String)
     """
-    ssh = monitor_2_class.ssh_server(host_obj)
+    ssh = monitor_class.ssh_server(host_obj)
     command = """cat /etc/issue|grep -i "%s\"""" %host_obj.version
     ssh_stdin, ssh_stdout_basic, ssh_stderr = ssh.exec_command(command)
     # 判断系统版本
@@ -116,7 +116,7 @@ class Task:
         if service_dict["m_type"] == 'system' and verifySystemVersion(host_obj):
             # centos
             if host_obj.version == 'centos':
-                centos_monitor_server_obj = monitor_2_class.Centos_monitor_server(project_nick,host_obj,service_dict)
+                centos_monitor_server_obj = monitor_class.Centos_monitor_server(project_nick, host_obj, service_dict)
                 # 1. cpu 监控
                 if service_dict["m_dim"] == 'cpu-usage':
                     runTaskByTimeType(centos_monitor_server_obj.check_CPU, service_dict)
@@ -132,13 +132,13 @@ class Task:
         # kettle
         elif service_dict["m_type"] == 'kettle':
             # 如果是kettle
-            kettle_monitor_obj = monitor_2_class.Kettle_monitor(project_nick,host_obj,service_dict)
+            kettle_monitor_obj = monitor_class.Kettle_monitor(project_nick, host_obj, service_dict)
 
             if service_dict["m_dim"] == 'process':
                 runTaskByTimeType(kettle_monitor_obj.check_process,service_dict)
         # gp
         elif service_dict["m_type"] == 'gp':
-            gp_monitor_obj = monitor_2_class.GP_monitor(project_nick,host_obj,db_obj,service_dict)
+            gp_monitor_obj = monitor_class.GP_monitor(project_nick, host_obj, db_obj, service_dict)
             if service_dict["m_dim"] == 'connections-check':
                 runTaskByTimeType(gp_monitor_obj.check_connections, service_dict)
             elif service_dict["m_dim"] == 'master-check':
@@ -150,7 +150,7 @@ class Task:
 
         # newbi
         elif service_dict["m_type"] == 'newbi':
-            newbi_monitor_obj = monitor_2_class.NewBI_monitor(project_nick,host_obj,service_dict)
+            newbi_monitor_obj = monitor_class.NewBI_monitor(project_nick, host_obj, service_dict)
             if service_dict["m_dim"] == 'process':
                 runTaskByTimeType(newbi_monitor_obj.check_process, service_dict)
             elif service_dict["m_dim"] == 'login':
