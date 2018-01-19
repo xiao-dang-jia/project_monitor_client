@@ -17,17 +17,17 @@ import initialisation
 reload(sys)
 sys.setdefaultencoding('utf8')
 
+## 需要手动配置
+host_ip = '172.18.21.245'
+db_nick = '李宁配置数据库'
+username = 'root'
+password = '54321'
+port = '3306'
+database = 'mydata'
+API_URL = 'http://172.18.21.245:8080/moniter/api/collect'
+
 if __name__ == '__main__':
     try:
-        ## 需要手动配置
-        host_ip = '172.18.21.245'
-        db_nick = '李宁配置数据库'
-        username = 'root'
-        password = '54321'
-        port = '3306'
-        database = 'mydata'
-        API_URL = 'http://172.18.21.245:8080/moniter/api/collect'
-
         print('1. main.py: 开始读取数据库配置')
         config_db_obj = monitor_class.DB(host_ip, db_nick, username, password, port, database)
 
