@@ -39,7 +39,7 @@ notes:
 2. configure.py
 3. initialisation.py
 4. class.py
-5. develop.py
+5. scheduler.py
 6. api.py
 
 
@@ -57,7 +57,7 @@ notes:
 4. monitor_class.py
 监控方法的具体实现
 
-5. develop.py
+5. scheduler.py
 监控任务的调度
 
 6. api.py
