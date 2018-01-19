@@ -24,6 +24,7 @@ username = 'xxxx'
 password = 'xxxx'
 port = 'xxxx'
 database = 'xxxx' # 这个是数据库名 很重要
+API_URL = 'XXXXXXXXX' # API接口地址
 
 5. 初始化客户端配置数据表
 
