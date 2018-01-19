@@ -18,7 +18,7 @@ sys.setdefaultencoding('utf8')
 
 class Host:
     """主机类"""
-    def __init__(self,host_ip,host_nick,username,password,version):
+    def __init__(self,host_ip, host_nick, username, password, version):
         self.host_ip = host_ip
         self.host_nick = host_nick
         self.username = username
@@ -26,7 +26,7 @@ class Host:
         self.version = version
 
     def __str__(self):
-        return "Host:"+ str(self.host_ip) + "\tusername:" + self.username + "\tpassword:" + self.password + "\tversion:" + self.version
+        return "Host:" + str(self.host_ip) + "\tusername:" + self.username + "\tpassword:" + self.password + "\tversion:" + self.version
 
 class DB:
     """数据库类"""

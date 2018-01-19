@@ -77,7 +77,8 @@ def runTaskByTimeType(target, in_time_dict):
         # 需要做个时间转换
         time_value = int(in_time_dict['m_interval_time'])
         sched.add_job(target, 'interval',seconds=time_value)
-    elif in_time_dict['m_interval_type'] == 'time':
+    # 由time 改成了everyday
+    elif in_time_dict['m_interval_type'] == 'everyday':
         # 获取格式化时间
         time_value = getFormattedTime(in_time_dict['m_interval_time'])
         sched.add_job(target, 'cron', hour=int(time_value['hour']), minute=int(time_value['minute']))
