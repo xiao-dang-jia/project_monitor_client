@@ -24,7 +24,7 @@ if __name__ == '__main__':
         db_nick = '李宁配置数据库'
         username = 'root'
         password = '54321'
-        port = '5432'
+        port = '3306'
         database = 'mydata'
         API_URL = 'http://172.18.21.245:8080/moniter/api/collect'
 
