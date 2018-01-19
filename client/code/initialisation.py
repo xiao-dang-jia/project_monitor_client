@@ -44,8 +44,8 @@ def initialise_next_checktime(current_time, config_db_obj, server_service_obj):
     if server_service_obj.service_dict['m_interval_type'] == 'period':
         timedelta = server_service_obj.service_dict['m_interval_time']
         next_checktime = current_time + datetime.timedelta(seconds=int(timedelta))
-        print "next_checktime:" + str(next_checktime)
-    elif server_service_obj.service_dict['m_interval_type'] == 'time':
+        print "initilisation.py: next_checktime:" + str(next_checktime)
+    elif server_service_obj.service_dict['m_interval_type'] == 'everyday':
         # 1. 获取凌晨时间
         today = datetime.datetime.today()
         wee_hour = datetime.datetime(today.year, today.month, today.day, 0, 0, 0)
@@ -53,9 +53,9 @@ def initialise_next_checktime(current_time, config_db_obj, server_service_obj):
         timedelta = server_service_obj.service_dict['m_interval_time']
         # 3. 初始化的checktime
         next_checktime = wee_hour + datetime.timedelta(seconds=int(timedelta))
-        print "next_checktime:" + str(next_checktime)
+        print "initilisation.py: next_checktime:" + str(next_checktime)
     else:
-        raise ValueError('未知的m_interval_type类型!')
+        raise ValueError('ERROR initilisation.py: 未知的m_interval_type类型!')
     try:
         # 执行sql语句
         cursor.execute(

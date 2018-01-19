@@ -9,7 +9,7 @@ API模块
 import sys
 import urllib
 import urllib2
-
+import main
 #解决 二进制str 转 unicode问题
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -21,8 +21,9 @@ def urlPost(postdata):
     :param postdata:
     :return: 返回HTTP状态码
     """
+    url = main.API_URL
     data = urllib.urlencode(postdata)
-    req = urllib2.Request('http://172.18.21.245:8080/moniter/api/collect', data)
+    req = urllib2.Request(url, data)
     response = urllib2.urlopen(req)
     if response.read() == 'OK':
         print "成功POST数据：" + str(postdata)

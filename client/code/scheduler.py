@@ -72,7 +72,7 @@ def runTaskByTimeType(target, in_time_dict):
     :param in_time_dict: 配置时间详细
     :return:
     """
-    print "monitor_3_develop: 配置一条任务!"
+    print "scheduler: 配置一条任务!"
     if in_time_dict['m_interval_type'] == 'period':
         # 需要做个时间转换
         time_value = int(in_time_dict['m_interval_time'])
@@ -157,7 +157,7 @@ class Task:
             elif service_dict["m_dim"] == 'login':
                 runTaskByTimeType(newbi_monitor_obj.check_login, service_dict)
         else:
-            raise ValueError('未知的服务！')
+            raise ValueError('scheduler.py: 未知的服务！')
 
 
 

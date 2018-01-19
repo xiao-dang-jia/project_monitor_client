@@ -26,23 +26,25 @@ if __name__ == '__main__':
         password = '54321'
         port = '5432'
         database = 'mydata'
+        API_URL = 'http://172.18.21.245:8080/moniter/api/collect'
 
+        print('1. main.py: 开始读取数据库配置')
         config_db_obj = monitor_class.DB(host_ip, db_nick, username, password, port, database)
 
         # 生成配置列表
         server_service_obj_list = configure.gen_server_service_obj_list(config_db_obj)
         for server_service_obj in server_service_obj_list:
             scheduler.Task(server_service_obj).genSchedule()
-        print('所有任务配置完成!')
+        print('2. main.py: 所有任务配置完成!')
 
         # 初始化next_checktime
         current_time = datetime.datetime.now()
         for server_service_obj in server_service_obj_list:
             initialisation.initialise_next_checktime(current_time, config_db_obj, server_service_obj)
-        print('初始化next_checktime完成!')
+        print('3. main.py: 初始化next_checktime完成!')
 
         # 启动所有的任务
         scheduler.sched.start()
-        print('所有任务启动完成!')
+        print('4. main.py: 所有任务启动完成!')
     except Exception, e:
         print e
