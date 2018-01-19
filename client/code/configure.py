@@ -189,7 +189,10 @@ def gen_server_service_obj_list(config_db_obj):
     # 初始化配置数据库连接
     # 1. 获取项目信息 project_nick
     # todo 是否这样能完全确定一个项目
-    data_project = getData(db_obj=config_db_obj, table='moniter_m_project', conditions=" where nick='李宁'")
+    # 服务器端需要多个nick确定一个项目
+    # data_project = getData(db_obj=config_db_obj, table='moniter_m_project', conditions=" where nick='李宁'")
+    # 标准客户端
+    data_project = getData(db_obj=config_db_obj, table='moniter_m_project')
     for row in data_project:
         project_nick = row['nick']
 
