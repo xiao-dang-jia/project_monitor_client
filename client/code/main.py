@@ -41,7 +41,7 @@ if __name__ == '__main__':
         current_time = datetime.datetime.now()
         for server_service_obj in server_service_obj_list:
             initialisation.initialise_next_checktime(current_time, config_db_obj, server_service_obj)
-        print('3. main.py: 初始化next_checktime完成!')
+        print('3. main.py: 初始化next_checktime完成\n等待任务启动中...')
 
         # 启动所有的任务
         scheduler.sched.start()
