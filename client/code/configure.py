@@ -30,12 +30,20 @@ def getData(db_obj,table,column="*",conditions=''):
     :param conditions: 筛选条件
     :return: 返回查询的数据 (dictionary形式)
     """
-    db = MySQLdb.connect(db_obj.host_ip, db_obj.username, db_obj.password, db_obj.database, charset='utf8')
-    cursor = db.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute("""select %s from %s%s;""" %(column, table, conditions))
-    result = cursor.fetchall()
-    db.close()
-    return result
+    try:
+        db = MySQLdb.connect(db_obj.host_ip, db_obj.username, db_obj.password, db_obj.database, charset='utf8')
+        try:
+            cursor = db.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute("""select %s from %s%s;""" % (column, table, conditions))
+            result = cursor.fetchall()
+            return result
+        except MySQLdb.ProgrammingError as e:
+            raise MySQLdb.ProgrammingError("ERROR 数据库执行语句出错:" + e)
+        finally:
+            # 一定关闭数据库连接
+            db.close()
+    except MySQLdb.OperationalError as e:
+        raise MySQLdb.OperationalError("ERROR 数据库连接不上:" + str(e))
 
 class M_D_HOST:
     """为M_D_HOST表建立了一个类，可以获取这种表所需的信息"""

@@ -169,7 +169,7 @@ class Centos_monitor_server(BaseServerMonitorable):
     def check_CPU(self):
         """检查CPU"""
         ssh = ssh_server(self.host_obj)
-        query_result = fun_query(ssh,"""vmstat|awk 'NR==3 {print $13+$14}'""","""vmstat""")
+        query_result = fun_query(ssh,"""vmstat|awk 'NR==3 {print ($13+$14)/100}'""","""vmstat""")
         data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                query_result[0], query_result[1], query_result[2])
         api.urlPost(data)
@@ -177,7 +177,8 @@ class Centos_monitor_server(BaseServerMonitorable):
     def check_IOPS(self):
         """检查IOPS"""
         ssh = ssh_server(self.host_obj)
-        query_result = fun_query(ssh,"""iostat |awk 'BEGIN{max=0} NR>6 {if($2+0>max+0) max=$2} END{print max"%"}'""","""iostat""")
+        # 最大的一个iops
+        query_result = fun_query(ssh,"""iostat |awk 'BEGIN{max=0} NR>6 {if($2+0>max+0) max=$2} END{print max}'""","""iostat""")
         data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                query_result[0], query_result[1], query_result[2])
         api.urlPost(data)
@@ -185,7 +186,7 @@ class Centos_monitor_server(BaseServerMonitorable):
     def check_disk(self):
         """检查DISK"""
         ssh = ssh_server(self.host_obj)
-        query_result = fun_query(ssh,"""iostat -dx|awk 'BEGIN{max=0} {if($14+0>max+0) max=$14} END{print max"%"}'""","""iostat""")
+        query_result = fun_query(ssh,"""iostat -dx|awk 'BEGIN{max=0} {if($14+0>max+0) max=$14} END{print max/100}'""","""iostat""")
         data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                query_result[0], query_result[1], query_result[2])
         api.urlPost(data)
@@ -247,34 +248,42 @@ class GP_monitor():
         :return: 返回查询结果
         """
         conn = db_connection(self.db_object)
-        cur = conn.cursor()
-        m_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        try:
+            cur = conn.cursor()
+        except Exception as e:
+            conn.close()
+            raise ValueError("ERROR 数据库连接异常:" + str(e))
+        try:
+            m_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
-        # m_value
-        cur.execute(query_m_value)
-        m_value = cur.fetchone()[0]
-        # m_log
-        print query_m_log
-        cur.execute(query_m_log)
-        # 对数据做处理
-        query2_result_org = cur.fetchone()
+            # m_value
+            cur.execute(query_m_value)
+            m_value = cur.fetchone()[0]
+            # m_log
+            print query_m_log
+            cur.execute(query_m_log)
+            # 对数据做处理
+            query2_result_org = cur.fetchone()
 
-        # 乳沟查询数据为空，记录查询语句
-        if query2_result_org is None:
-            m_log = query_m_log
-        else:
-            query2_result = list(query2_result_org)
+            # 乳沟查询数据为空，记录查询语句
+            if query2_result_org is None:
+                m_log = query_m_log
+            else:
+                query2_result = list(query2_result_org)
 
-            # 将查询结果连接起来，方便日志记录
-            # eleminate None value
-            query2_result = [str(x) for x in query2_result if x is not None]
-            m_log = " ".join(query2_result)
-        data = api.format_json(self.project_nick, self.host_obj.host_nick, self.db_object.db_nick,
-                               self.service_dict['m_type'], self.service_dict['m_dim'], m_value, m_log, m_timestamp)
-
-        cur.close()
-        conn.close()
-        return data
+                # 将查询结果连接起来，方便日志记录
+                # eleminate None value
+                query2_result = [str(x) for x in query2_result if x is not None]
+                m_log = " ".join(query2_result)
+            data = api.format_json(self.project_nick, self.host_obj.host_nick, self.db_object.db_nick,
+                                   self.service_dict['m_type'], self.service_dict['m_dim'], m_value, m_log, m_timestamp)
+            return data
+        except Exception as e:
+            raise ValueError("ERROR 数据库操作异常:" + str(e))
+        finally:
+            """确保connection关闭"""
+            cur.close()
+            conn.close()
 
     def check_connections(self):
         """检查数据库连接数"""

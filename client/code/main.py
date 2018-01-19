@@ -17,8 +17,6 @@ import initialisation
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-
-
 if __name__ == '__main__':
     try:
         ## 需要手动配置
@@ -42,6 +40,7 @@ if __name__ == '__main__':
         for server_service_obj in server_service_obj_list:
             initialisation.initialise_next_checktime(current_time, config_db_obj, server_service_obj)
         print('初始化next_checktime完成!')
+
         # 启动所有的任务
         scheduler.sched.start()
         print('所有任务启动完成!')

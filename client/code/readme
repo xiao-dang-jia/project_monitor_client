@@ -12,6 +12,9 @@ yum install MySQL-python
 pip install paramiko
 pip install psycopg2
 
+# 为了可以使用 iostat
+yum -y install sysstat
+
 2. 在main.py 中配置 "监控配置数据库信息"：
 例子:
 host_ip = 'xxxx.xxxx.xxxx.xxxx'
@@ -30,29 +33,32 @@ notes:
 * 字段命名是一致的
 
 ##############################
-# SaaS化监控脚本 客户端由5部分模块组成:
+# SaaS化监控脚本 客户端由6部分模块组成:
 
-1. monitor_0_main.py
-2. monitor_1_configure.py
-3. monitor_2_class.py
-4. monitor_3_develop.py
-5. monitor_4_post.py
+1. main.py
+2. configure.py
+3. initialisation.py
+4. class.py
+5. develop.py
+6. api.py
 
 
 ##############################
 # 功能
-
-1. monitor_0_main.py
+1. main.py
 程序入口
 
-2. monitor_1_configure.py
+2. configure.py
 读取数据库配置
 
-3. monitor_2_class.py
+3. initialisation.py
+初始化 next_checktime
+
+4. monitor_class.py
 监控方法的具体实现
 
-4. monitor_3_develop.py
+5. develop.py
 监控任务的调度
 
-5. monitor_4_post.py
+6. api.py
 API
