@@ -56,7 +56,6 @@ def initialise_next_checktime(current_time, config_db_obj, server_service_obj):
         print "next_checktime:" + str(next_checktime)
     else:
         raise ValueError('未知的m_interval_type类型!')
-    print "+++++++++++++sql 语句是:" + """update moniter_m_project_checklist set Next_checktime='%s' %s;""" % (next_checktime, conditions)
     try:
         # 执行sql语句
         cursor.execute(

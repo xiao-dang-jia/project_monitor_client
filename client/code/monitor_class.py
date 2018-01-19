@@ -169,7 +169,7 @@ class Centos_monitor_server(BaseServerMonitorable):
     def check_CPU(self):
         """检查CPU"""
         ssh = ssh_server(self.host_obj)
-        query_result = fun_query(ssh,"""vmstat|awk 'NR==3 {print $13+$14"%"}'""","""vmstat""")
+        query_result = fun_query(ssh,"""vmstat|awk 'NR==3 {print $13+$14}'""","""vmstat""")
         data = api.format_json(self.project_nick, self.host_obj.host_nick, None, self.service_dict['m_type'], self.service_dict['m_dim'],
                                query_result[0], query_result[1], query_result[2])
         api.urlPost(data)
