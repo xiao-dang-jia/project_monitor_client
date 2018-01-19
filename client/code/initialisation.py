@@ -13,8 +13,8 @@ import monitor_class
 import datetime
 
 #解决 二进制str 转 unicode问题
-# reload(sys)
-# sys.setdefaultencoding('utf8')
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 
 def initialise_next_checktime(current_time, config_db_obj, server_service_obj):
