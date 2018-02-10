@@ -35,10 +35,12 @@ def getData(db_obj,table,column="*",conditions=''):
         try:
             cursor = db.cursor(MySQLdb.cursors.DictCursor)
             cursor.execute("""select %s from %s%s;""" % (column, table, conditions))
+            print("""select %s from %s%s;""" % (column, table, conditions))
             result = cursor.fetchall()
             return result
         except MySQLdb.ProgrammingError as e:
-            raise MySQLdb.ProgrammingError("ERROR 数据库执行语句出错:" + e)
+            raise MySQLdb.ProgrammingError("ERROR 数据库执行语句出错:" + str(e))
+            #raise MySQLdb.ProgrammingError("ERROR 数据库执行语句出错:" + e)
         finally:
             # 一定关闭数据库连接
             db.close()
@@ -57,7 +59,7 @@ class M_D_HOST:
         :return: 昵称列表 (list)
         """
         project_nick_conditions = " where project_nick='%s'" % self.project_nick
-        rows = getData(db_obj=self.config_db_obj, table='moniter_m_d_host', conditions=project_nick_conditions)
+        rows = getData(db_obj=self.config_db_obj, table='monitor_m_d_host', conditions=project_nick_conditions)
         host_nick_list = []
         for row in rows:
             host_ip = row['host_nick']
@@ -71,7 +73,7 @@ class M_D_HOST:
         :return:
         """
         condition = " where project_nick='%s' and host_nick='%s'" % (self.project_nick, host_nick)
-        rows = getData(db_obj=self.config_db_obj, table='moniter_m_d_host',
+        rows = getData(db_obj=self.config_db_obj, table='monitor_m_d_host',
                                   conditions=condition)
         if len(rows) != 1:
             raise ValueError("ERROR: 一个host_nick + project_nick的联合主键对应到了多个host_ip！")
@@ -79,15 +81,15 @@ class M_D_HOST:
 
     def get_host_object_by_host_nick(self, host_nick):
         """
-        通过host_nick + project_nick 从表moniter_m_d_host 和 表moniter_m_d_user_host获取其相关的信息，生成host_obj
+        通过host_nick + project_nick 从表monitor_m_d_host 和 表monitor_m_d_user_host获取其相关的信息，生成host_obj
         :param host_nick:
         :return: host_obj (Host类对象)
         """
         project_nick_conditions = " where project_nick='%s' and host_nick='%s'" % (self.project_nick, host_nick)
-        rows_host = getData(db_obj=self.config_db_obj, table='moniter_m_d_host',
+        rows_host = getData(db_obj=self.config_db_obj, table='monitor_m_d_host',
                                   conditions=project_nick_conditions)
 
-        rows_host_user = getData(db_obj=self.config_db_obj, table='moniter_m_d_user_host',
+        rows_host_user = getData(db_obj=self.config_db_obj, table='monitor_m_d_user_host',
                                        conditions=project_nick_conditions)
 
         for row in rows_host:
@@ -97,9 +99,8 @@ class M_D_HOST:
         for row in rows_host_user:
             username = row['username']
             password = row['password']
-
-        host_object = monitor_class.Host(host_ip, host_nick, username, password=password, version=server_type)
-        return host_object
+	host_object = monitor_class.Host(host_ip, host_nick, username, password=password, version=server_type)
+	return host_object
 
     def get_host_object_list(self):
         """
@@ -127,12 +128,13 @@ class M_D_DB:
         :return: db_obj
         """
         conditions = " where project_nick='%s' and db_nick='%s' and host_nick='%s'" % (self.project_nick, self.db_nick, self.host_nick)
-        rows = getData(self.config_db_obj, table='moniter_m_d_db', conditions=conditions)
+        rows = getData(self.config_db_obj, table='monitor_m_d_db', conditions=conditions)
+        print(rows)
 
         if len(rows) != 1:
             raise ValueError("ERROR: 一个host_nick + project_nick + db_nick的联合主键对应到了多个database！")
 
-        host_table_obj = M_D_HOST(self.config_db_obj, self.project_nick)
+        host_table_obj=M_D_HOST(self.config_db_obj, self.project_nick)
         host_ip = host_table_obj.get_hostip_by_hostnick(host_nick=self.host_nick)
 
         user_dict = self.get_db_user_dict()
@@ -147,7 +149,7 @@ class M_D_DB:
         :return:
         """
         condition = " where project_nick='%s' and db_nick='%s'" % (self.project_nick, self.db_nick)
-        rows = getData(self.config_db_obj, table='moniter_m_d_user_db', conditions=condition)
+        rows = getData(self.config_db_obj, table='monitor_m_d_user_db', conditions=condition)
         return rows[0]
 
 class M_PROJECT_CHECKLIST:
@@ -166,7 +168,7 @@ class M_PROJECT_CHECKLIST:
         project_checklist_condition = " where m_status='on' and project_nick='%s' and host_nick='%s'" % (
                 self.project_nick, self.host_nick)
 
-        rows = getData(db_obj=self.config_db_obj, table='moniter_m_project_checklist', conditions=project_checklist_condition)
+        rows = getData(db_obj=self.config_db_obj, table='monitor_m_project_checklist', conditions=project_checklist_condition)
         m_dim_dict_list = []
 
         for row in rows:
@@ -190,12 +192,11 @@ def gen_server_service_obj_list(config_db_obj):
     # 1. 获取项目信息 project_nick
     # todo 是否这样能完全确定一个项目
     # 服务器端需要多个nick确定一个项目
-    data_project = getData(db_obj=config_db_obj, table='moniter_m_project', conditions=" where nick='李宁'")
+    data_project = getData(db_obj=config_db_obj, table='monitor_m_project', conditions=" where nick='爱哆哆'")
     # 标准客户端
-    # data_project = getData(db_obj=config_db_obj, table='moniter_m_project')
+    # data_project = getData(db_obj=config_db_obj, table='monitor_m_project')
     for row in data_project:
         project_nick = row['nick']
-
     m_d_host_obj = M_D_HOST(config_db_obj=config_db_obj, project_nick=project_nick)
     server_service_obj_list = []
     # 2. 获取该项目拥有的主机

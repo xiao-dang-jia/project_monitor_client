@@ -19,7 +19,7 @@ sys.setdefaultencoding('utf8')
 
 def initialise_next_checktime(current_time, config_db_obj, server_service_obj):
     """
-    初始化moniter_m_project_checklist中的next_checktime，以第一次发送监控时间为值。
+    初始化monitor_m_project_checklist中的next_checktime，以第一次发送监控时间为值。
     :param server_service_obj:
     :return:
     """
@@ -59,7 +59,7 @@ def initialise_next_checktime(current_time, config_db_obj, server_service_obj):
     try:
         # 执行sql语句
         cursor.execute(
-            """update moniter_m_project_checklist set Next_checktime='%s' %s;""" % (next_checktime, conditions))
+            """update monitor_m_project_checklist set Next_checktime='%s' %s;""" % (next_checktime, conditions))
         # 提交到数据库执行
         db.commit()
     except MySQLdb.Error as e:

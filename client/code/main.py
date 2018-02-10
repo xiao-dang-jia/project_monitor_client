@@ -18,13 +18,13 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 ## 需要手动配置
-host_ip = '172.18.21.245'
-db_nick = '李宁配置数据库'
-username = 'root'
-password = '54321'
+host_ip = 'rm-bp1tby5h17t84ddpf.mysql.rds.aliyuncs.com'
+db_nick = '爱哆哆配置数据库'
+username = 'syadmin'
+password = 'tXo8fe2dYfkf'
 port = '3306'
-database = 'mydata'
-API_URL = 'http://172.18.21.245:8080/moniter/api/collect'
+database = 'bigdata_monitor'
+API_URL = 'http://bi.bigdata.fenxibao.com/monitor_web/api/collect'
 
 if __name__ == '__main__':
     try:
